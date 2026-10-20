@@ -1,0 +1,26 @@
+FROM ruby:3.3.7-slim-bookworm
+
+ARG APP_UID=1000
+ARG APP_GID=1000
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       build-essential git libpq-dev libyaml-dev libvips pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd --gid "$APP_GID" app \
+    && useradd --uid "$APP_UID" --gid app --create-home app \
+    && mkdir -p /app \
+    && chown -R app:app /app /usr/local/bundle
+
+ENV HOME=/home/app
+
+WORKDIR /app
+USER app
+
+COPY --chown=app:app Gemfile Gemfile.lock ./
+RUN BUNDLE_FROZEN=true bundle install
+
+EXPOSE 3000
+
+CMD ["bin/rails", "server", "-b", "0.0.0.0"]
