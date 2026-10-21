@@ -10,7 +10,7 @@ RSpec.describe ColumnValidator, type: :model do
     validator.reload
 
     expect(validator.processor_class).to eq("RequiredValidator")
-    expect(validator.description).to eq("Requires an input value")
+    expect(validator.description).to eq("Column requires a value")
   end
 
   it "allows an omitted description" do
