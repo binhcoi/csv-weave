@@ -5,6 +5,7 @@ class CreateColumnValidators < ActiveRecord::Migration[8.1]
       t.string :processor_class, null: false
 
       t.timestamps
+      t.index :processor_class, unique: true
     end
   end
 end

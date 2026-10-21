@@ -19,6 +19,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_235848) do
     t.string "processor_class", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["processor_class"], name: "index_column_validators_on_processor_class", unique: true
   end
 
   create_table "columns", force: :cascade do |t|
