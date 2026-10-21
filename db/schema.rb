@@ -10,9 +10,17 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_235848) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_004200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "column_transformers", force: :cascade do |t|
+    t.text "description"
+    t.string "processor_class", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["processor_class"], name: "index_column_transformers_on_processor_class", unique: true
+  end
 
   create_table "column_validators", force: :cascade do |t|
     t.text "description"

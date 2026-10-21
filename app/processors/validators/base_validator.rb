@@ -6,7 +6,7 @@ module Validators
     end
 
     def validate(row)
-      raise "unimplemented"
+      raise NotImplementedError, "#{self.class} must implement #validate"
     end
 
     def column_data(row)

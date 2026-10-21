@@ -70,7 +70,7 @@ RSpec.describe ColumnValidator, type: :model do
         validator.processor_class = value
 
         expect(ActiveSupport::Inflector).not_to receive(:constantize)
-        expect { validator.get_validator(column, input_json) }.to raise_error(RuntimeError, /validator/)
+        expect { validator.get_validator(column, input_json) }.to raise_error(ArgumentError, /validator/)
       end
     end
   end
