@@ -9,7 +9,7 @@ class CreateColumns < ActiveRecord::Migration[8.1]
       t.timestamps
       t.index [:file_type_id, :position], unique: true
       t.index [:file_type_id, :name], unique: true
-      t.check_constraint "position > 0", name: "positive_position"
+      t.check_constraint "position >= 0", name: "nonnegative_position"
     end
   end
 end

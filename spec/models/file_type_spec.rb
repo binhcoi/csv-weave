@@ -35,7 +35,7 @@ RSpec.describe FileType, type: :model do
   it "returns its columns in position order" do
     file_type.save!
     later_column = file_type.columns.create!(name: "email", position: 3)
-    first_column = file_type.columns.create!(name: "customer_id", position: 1)
+    first_column = file_type.columns.create!(name: "customer_id", position: 0)
 
     expect(file_type.columns.reload.to_a).to eq([first_column, later_column])
   end

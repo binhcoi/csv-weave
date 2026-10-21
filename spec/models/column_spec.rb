@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe Column, type: :model do
   subject(:column) do
-    described_class.new(file_type: file_type, name: "email", position: 1)
+    described_class.new(file_type: file_type, name: "email", position: 0)
   end
 
   let(:file_type) { FileType.create!(name: "Customer import") }
@@ -12,7 +12,7 @@ RSpec.describe Column, type: :model do
     column.reload
 
     expect(column.name).to eq("email")
-    expect(column.position).to eq(1)
+    expect(column.position).to eq(0)
     expect(column.file_type).to eq(file_type)
   end
 
@@ -35,7 +35,6 @@ RSpec.describe Column, type: :model do
   {
     "nil" => nil,
     "empty" => "",
-    "zero" => 0,
     "negative" => -1,
     "fractional" => 1.5,
     "fractional string" => "1.5",
@@ -60,7 +59,7 @@ RSpec.describe Column, type: :model do
     end
 
     it "rejects duplicate positions within the same file type" do
-      duplicate = described_class.new(file_type: file_type, name: "customer_id", position: 1)
+      duplicate = described_class.new(file_type: file_type, name: "customer_id", position: 0)
 
       expect(duplicate).not_to be_valid
       expect(duplicate.errors.of_kind?(:position, :taken)).to be true
@@ -68,7 +67,7 @@ RSpec.describe Column, type: :model do
 
     it "allows the same name and position in a different file type" do
       other_file_type = FileType.create!(name: "Customer export")
-      other_column = described_class.create!(file_type: other_file_type, name: "email", position: 1)
+      other_column = described_class.create!(file_type: other_file_type, name: "email", position: 0)
 
       expect(other_column.reload.file_type).to eq(other_file_type)
     end
@@ -81,7 +80,13 @@ RSpec.describe Column, type: :model do
   end
 
   describe "database constraints" do
-    let(:attributes) { { file_type_id: file_type.id, name: "email", position: 1 } }
+    let(:attributes) { { file_type_id: file_type.id, name: "email", position: 0 } }
+
+    it "allows position zero without model validation" do
+      described_class.insert_all!([attributes.merge(position: 0)])
+
+      expect(described_class.find_by!(file_type: file_type, name: "email").position).to eq(0)
+    end
 
     # insert_all! bypasses model validations; savepoints isolate expected SQL failures.
     [:file_type_id, :name, :position].each do |attribute|
@@ -116,16 +121,14 @@ RSpec.describe Column, type: :model do
       end
     end
 
-    [0, -1].each do |position|
-      it "rejects position #{position} without model validation" do
-        expect do
-          described_class.transaction(requires_new: true) do
-            described_class.insert_all!([attributes.merge(position: position)])
-          end
-        end.to raise_error(ActiveRecord::StatementInvalid) { |error|
-          expect(error.cause).to be_a(PG::CheckViolation)
-        }
-      end
+    it "rejects negative positions without model validation" do
+      expect do
+        described_class.transaction(requires_new: true) do
+          described_class.insert_all!([attributes.merge(position: -1)])
+        end
+      end.to raise_error(ActiveRecord::StatementInvalid) { |error|
+        expect(error.cause).to be_a(PG::CheckViolation)
+      }
     end
   end
 end

@@ -10,9 +10,16 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_234203) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_235848) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "column_validators", force: :cascade do |t|
+    t.text "description"
+    t.string "processor_class", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
 
   create_table "columns", force: :cascade do |t|
     t.bigint "file_type_id", null: false
@@ -24,7 +31,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_234203) do
     t.index ["file_type_id", "name"], name: "index_columns_on_file_type_id_and_name", unique: true
     t.index ["file_type_id", "position"], name: "index_columns_on_file_type_id_and_position", unique: true
     t.index ["file_type_id"], name: "index_columns_on_file_type_id"
-    t.check_constraint "\"position\" > 0", name: "positive_position"
+    t.check_constraint "\"position\" >= 0", name: "nonnegative_position"
   end
 
   create_table "file_types", force: :cascade do |t|
