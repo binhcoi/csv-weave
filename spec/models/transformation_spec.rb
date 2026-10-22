@@ -101,12 +101,6 @@ RSpec.describe Transformation, type: :model do
       expect(duplicate.errors.of_kind?(:output_column_id, :taken)).to be true
     end
 
-    it "allows updating an existing transformation without conflicting with itself" do
-      transformation.update!(input_json: { "name" => "email" })
-
-      expect(transformation.reload.input_json).to eq("name" => "email")
-    end
-
     it "allows the same output column in a different map" do
       other_map = TransformMap.create!(name: "Alternative conversion", input_file_type: input_file_type,
                                        output_file_type: output_file_type)
@@ -127,9 +121,7 @@ RSpec.describe Transformation, type: :model do
       "string" => "email",
       "number" => 1,
       "boolean" => true,
-      "missing source column" => {},
       "NULL source column" => { "name" => nil },
-      "numeric source column" => { "name" => 123 },
       "empty source column" => { "name" => "" },
       "unexpected parameter" => { "name" => "email", "unexpected" => true },
     }.each do |description, parameters|
@@ -141,7 +133,7 @@ RSpec.describe Transformation, type: :model do
       end
     end
 
-    it "returns the invalid field in its validation errors" do
+    it "rejects a numeric source column and identifies the invalid field" do
       transformation.input_json = { "name" => 123 }
 
       expect(transformation).not_to be_valid

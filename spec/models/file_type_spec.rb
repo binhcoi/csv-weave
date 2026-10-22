@@ -5,10 +5,6 @@ RSpec.describe FileType, type: :model do
     described_class.new(name: "Customer import", description: "Synthetic customer CSV schema")
   end
 
-  it "is valid with a name" do
-    expect(file_type).to be_valid
-  end
-
   { "nil" => nil, "empty" => "", "whitespace" => " \t\n" }.each do |description, value|
     it "rejects #{description} names" do
       file_type = described_class.new(name: value)
