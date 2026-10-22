@@ -3,6 +3,7 @@ class ColumnValidator < ApplicationRecord
     "RequiredValidator",
   ].freeze
 
+  has_many :validations
   validates :processor_class, presence: true, inclusion: { in: PROCESSOR_CLASSES }, uniqueness: true
 
   def get_validator(column, input_json)

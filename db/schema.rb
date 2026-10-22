@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_004200) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_002423) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -61,7 +61,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_004200) do
     t.index ["output_file_type_id"], name: "index_transform_maps_on_output_file_type_id"
   end
 
+  create_table "transformations", force: :cascade do |t|
+    t.bigint "transform_map_id", null: false
+    t.bigint "output_column_id", null: false
+    t.bigint "column_transformer_id", null: false
+    t.jsonb "input_json", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["column_transformer_id"], name: "index_transformations_on_column_transformer_id"
+    t.index ["output_column_id"], name: "index_transformations_on_output_column_id"
+    t.index ["transform_map_id", "output_column_id"], name: "index_transformations_on_transform_map_id_and_output_column_id", unique: true
+    t.index ["transform_map_id"], name: "index_transformations_on_transform_map_id"
+  end
+
+  create_table "validations", force: :cascade do |t|
+    t.bigint "column_id", null: false
+    t.bigint "column_validator_id", null: false
+    t.jsonb "input_json", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["column_id"], name: "index_validations_on_column_id"
+    t.index ["column_validator_id"], name: "index_validations_on_column_validator_id"
+  end
+
   add_foreign_key "columns", "file_types"
   add_foreign_key "transform_maps", "file_types", column: "input_file_type_id"
   add_foreign_key "transform_maps", "file_types", column: "output_file_type_id"
+  add_foreign_key "transformations", "column_transformers"
+  add_foreign_key "transformations", "columns", column: "output_column_id"
+  add_foreign_key "transformations", "transform_maps"
+  add_foreign_key "validations", "column_validators"
+  add_foreign_key "validations", "columns"
 end

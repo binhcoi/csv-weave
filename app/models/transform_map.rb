@@ -1,6 +1,7 @@
 class TransformMap < ApplicationRecord
   belongs_to :input_file_type, class_name: "FileType"
   belongs_to :output_file_type, class_name: "FileType"
+  has_many :transformations
 
   validates :name, presence: true
   validates :input_file_type, presence: true
