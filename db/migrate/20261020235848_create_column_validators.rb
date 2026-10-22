@@ -3,6 +3,7 @@ class CreateColumnValidators < ActiveRecord::Migration[8.1]
     create_table :column_validators do |t|
       t.text :description
       t.string :processor_class, null: false
+      t.jsonb :input_schema
 
       t.timestamps
       t.index :processor_class, unique: true

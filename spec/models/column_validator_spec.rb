@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe ColumnValidator, type: :model do
   subject(:validator) do
-    described_class.new(processor_class: "RequiredValidator", description: "Column requires a value")
+    FactoryBot.build(:column_validator)
   end
 
   it "persists its processor class and description" do
@@ -14,7 +14,7 @@ RSpec.describe ColumnValidator, type: :model do
   end
 
   it "allows an omitted description" do
-    validator = described_class.create!(processor_class: "RequiredValidator")
+    validator = FactoryBot.create(:column_validator, description: nil)
 
     expect(validator.reload.description).to be_nil
   end
@@ -39,7 +39,7 @@ RSpec.describe ColumnValidator, type: :model do
 
   it "rejects duplicate catalog entries for the same processor" do
     validator.save!
-    duplicate = described_class.new(processor_class: "RequiredValidator")
+    duplicate = FactoryBot.build(:column_validator)
 
     expect(duplicate).not_to be_valid
     expect(duplicate.errors.of_kind?(:processor_class, :taken)).to be true
@@ -79,7 +79,7 @@ RSpec.describe ColumnValidator, type: :model do
     it "rejects a NULL processor class without model validation" do
       expect do
         described_class.transaction(requires_new: true) do
-          described_class.insert_all!([{ processor_class: nil }])
+          described_class.insert_all!([{ processor_class: nil, input_schema: validator.input_schema }])
         end
       end.to raise_error(ActiveRecord::NotNullViolation)
     end
@@ -89,7 +89,7 @@ RSpec.describe ColumnValidator, type: :model do
 
       expect do
         described_class.transaction(requires_new: true) do
-          described_class.insert_all!([{ processor_class: "RequiredValidator" }])
+          described_class.insert_all!([{ processor_class: "RequiredValidator", input_schema: validator.input_schema }])
         end
       end.to raise_error(ActiveRecord::RecordNotUnique)
     end

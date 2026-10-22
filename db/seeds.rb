@@ -12,6 +12,7 @@ validators = [
   {
     processor_class: "RequiredValidator",
     description: "Validate a column has a nonblank value",
+    input_schema: nil,
   },
 ]
 
@@ -19,6 +20,14 @@ transformers = [
   {
     processor_class: "CopyTransformer",
     description: "Copy the value of an input column to an output column",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", minLength: 1 },
+      },
+      required: ["name"],
+      additionalProperties: false,
+    },
   },
 ]
 

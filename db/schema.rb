@@ -17,6 +17,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_002423) do
   create_table "column_transformers", force: :cascade do |t|
     t.text "description"
     t.string "processor_class", null: false
+    t.jsonb "input_schema"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["processor_class"], name: "index_column_transformers_on_processor_class", unique: true
@@ -25,6 +26,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_002423) do
   create_table "column_validators", force: :cascade do |t|
     t.text "description"
     t.string "processor_class", null: false
+    t.jsonb "input_schema"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["processor_class"], name: "index_column_validators_on_processor_class", unique: true
@@ -65,7 +67,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_002423) do
     t.bigint "transform_map_id", null: false
     t.bigint "output_column_id", null: false
     t.bigint "column_transformer_id", null: false
-    t.jsonb "input_json", default: {}, null: false
+    t.jsonb "input_json", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["column_transformer_id"], name: "index_transformations_on_column_transformer_id"
@@ -77,7 +79,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_002423) do
   create_table "validations", force: :cascade do |t|
     t.bigint "column_id", null: false
     t.bigint "column_validator_id", null: false
-    t.jsonb "input_json", default: {}, null: false
+    t.jsonb "input_json", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["column_id"], name: "index_validations_on_column_id"

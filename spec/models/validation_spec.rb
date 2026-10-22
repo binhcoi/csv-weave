@@ -7,7 +7,7 @@ RSpec.describe Validation, type: :model do
 
   let(:file_type) { FileType.create!(name: "Customer import") }
   let(:column) { Column.create!(file_type: file_type, name: "email", position: 0) }
-  let(:column_validator) { ColumnValidator.create!(processor_class: "RequiredValidator") }
+  let(:column_validator) { FactoryBot.create(:column_validator) }
 
   it "persists its column and validator catalog entry" do
     validation.save!
@@ -41,6 +41,18 @@ RSpec.describe Validation, type: :model do
   end
 
   it "persists and updates nested JSON parameters" do
+    column_validator.update!(input_schema: {
+      "type" => "object",
+      "properties" => {
+        "message" => { "type" => "string" },
+        "options" => {
+          "type" => "object",
+          "properties" => { "trim" => { "type" => "boolean" } },
+          "additionalProperties" => false,
+        },
+      },
+      "additionalProperties" => false,
+    })
     validation.input_json = { "message" => "Email is required", "options" => { "trim" => true } }
     validation.save!
 
@@ -77,6 +89,52 @@ RSpec.describe Validation, type: :model do
     expect(rule.column_validator).to eq(column_validator)
   end
 
+  describe "input schema validation" do
+    let(:column_validator) do
+      FactoryBot.create(:column_validator, input_schema: {
+        "type" => "object", "properties" => {}, "additionalProperties" => false,
+      })
+    end
+
+    {
+      "NULL" => nil,
+      "array" => [],
+      "string" => "email",
+      "number" => 1,
+      "boolean" => true,
+      "unexpected parameter" => { "unexpected" => true },
+    }.each do |description, parameters|
+      it "rejects #{description} parameters when the schema requires an empty object" do
+        validation.input_json = parameters
+
+        expect(validation).not_to be_valid
+        expect(validation.errors[:input_json]).not_to be_empty
+      end
+    end
+
+    it "rejects invalid updates without changing the saved parameters" do
+      validation.save!
+
+      expect(validation.update(input_json: { "unexpected" => true })).to be false
+      expect(validation.errors[:input_json].join).to include("unexpected")
+      expect(validation.reload.input_json).to eq({})
+    end
+
+    it "reports an invalid catalog schema as an error instead of raising" do
+      column_validator.input_schema = { "type" => "unknown" }
+
+      expect(validation).not_to be_valid
+      expect(validation.errors[:input_json].join).to include("catalog input schema is invalid")
+    end
+  end
+
+  it "allows NULL parameters when the validator has no schema" do
+    validation.input_json = nil
+    validation.save!
+
+    expect(validation.reload.input_json).to be_nil
+  end
+
   describe "database constraints" do
     let(:attributes) do
       { column_id: column.id, column_validator_id: column_validator.id, input_json: {} }
@@ -89,7 +147,7 @@ RSpec.describe Validation, type: :model do
     end
 
     # insert_all! bypasses model validations; savepoints isolate expected SQL failures.
-    [:column_id, :column_validator_id, :input_json].each do |attribute|
+    [:column_id, :column_validator_id].each do |attribute|
       it "rejects a NULL #{attribute} without model validation" do
         expect do
           described_class.transaction(requires_new: true) do

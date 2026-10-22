@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe Transformation, type: :model do
   subject(:transformation) do
     described_class.new(transform_map: transform_map, output_column: output_column,
-                        column_transformer: column_transformer)
+                        column_transformer: column_transformer, input_json: { "name" => "email" })
   end
 
   let(:input_file_type) { FileType.create!(name: "Customer import") }
@@ -13,7 +13,7 @@ RSpec.describe Transformation, type: :model do
                          output_file_type: output_file_type)
   end
   let(:output_column) { Column.create!(file_type: output_file_type, name: "email", position: 0) }
-  let(:column_transformer) { ColumnTransformer.create!(processor_class: "CopyTransformer") }
+  let(:column_transformer) { FactoryBot.create(:column_transformer) }
 
   it "persists its map, output column, and transformer catalog entry" do
     transformation.save!
@@ -41,19 +41,19 @@ RSpec.describe Transformation, type: :model do
     end
   end
 
-  it "defaults omitted parameters to an empty object and accepts them" do
-    transformation.save!
+  it "rejects omitted parameters when the transformer requires a source column" do
+    rule = described_class.new(transform_map: transform_map, output_column: output_column,
+                               column_transformer: column_transformer)
 
-    expect(transformation.reload.input_json).to eq({})
+    expect(rule.input_json).to eq({})
+    expect(rule).not_to be_valid
+    expect(rule.errors[:input_json].join).to include("name")
   end
 
-  it "persists and updates nested JSON parameters" do
-    transformation.input_json = { "name" => "email", "options" => { "fallback" => nil } }
+  it "persists and updates source-column parameters" do
     transformation.save!
 
-    expect(transformation.reload.input_json).to eq(
-      "name" => "email", "options" => { "fallback" => nil },
-    )
+    expect(transformation.reload.input_json).to eq("name" => "email")
 
     transformation.update!(input_json: { "name" => "contact_email" })
 
@@ -64,7 +64,8 @@ RSpec.describe Transformation, type: :model do
     transformation.save!
     other_column = Column.create!(file_type: output_file_type, name: "customer_id", position: 1)
     other_transformation = described_class.create!(transform_map: transform_map, output_column: other_column,
-                                                 column_transformer: column_transformer)
+                                                 column_transformer: column_transformer,
+                                                 input_json: { "name" => "customer_id" })
 
     expect(transform_map.transformations.reload).to contain_exactly(transformation, other_transformation)
     expect(output_column.transformations.reload).to contain_exactly(transformation)
@@ -73,7 +74,8 @@ RSpec.describe Transformation, type: :model do
 
   it "builds a transformation through its map" do
     rule = transform_map.transformations.create!(output_column: output_column,
-                                                column_transformer: column_transformer)
+                                                column_transformer: column_transformer,
+                                                input_json: { "name" => "email" })
 
     expect(rule.reload.transform_map).to eq(transform_map)
     expect(rule.output_column).to eq(output_column)
@@ -81,7 +83,8 @@ RSpec.describe Transformation, type: :model do
 
   it "builds a transformation through its output column" do
     rule = output_column.transformations.create!(transform_map: transform_map,
-                                                column_transformer: column_transformer)
+                                                column_transformer: column_transformer,
+                                                input_json: { "name" => "email" })
 
     expect(rule.reload.transform_map).to eq(transform_map)
     expect(rule.output_column).to eq(output_column)
@@ -108,12 +111,86 @@ RSpec.describe Transformation, type: :model do
       other_map = TransformMap.create!(name: "Alternative conversion", input_file_type: input_file_type,
                                        output_file_type: output_file_type)
       other_transformation = described_class.create!(transform_map: other_map, output_column: output_column,
-                                                   column_transformer: column_transformer)
+                                                   column_transformer: column_transformer,
+                                                   input_json: { "name" => "email" })
 
       expect(other_transformation.reload.output_column).to eq(output_column)
       expect(other_map.transformations.reload).to contain_exactly(other_transformation)
       expect(transform_map.transformations.reload).to contain_exactly(transformation)
     end
+  end
+
+  describe "input schema validation" do
+    {
+      "NULL" => nil,
+      "array" => [],
+      "string" => "email",
+      "number" => 1,
+      "boolean" => true,
+      "missing source column" => {},
+      "NULL source column" => { "name" => nil },
+      "numeric source column" => { "name" => 123 },
+      "empty source column" => { "name" => "" },
+      "unexpected parameter" => { "name" => "email", "unexpected" => true },
+    }.each do |description, parameters|
+      it "rejects #{description} parameters for CopyTransformer" do
+        transformation.input_json = parameters
+
+        expect(transformation).not_to be_valid
+        expect(transformation.errors[:input_json]).not_to be_empty
+      end
+    end
+
+    it "returns the invalid field in its validation errors" do
+      transformation.input_json = { "name" => 123 }
+
+      expect(transformation).not_to be_valid
+      expect(transformation.errors[:input_json].join).to include("/name", "string")
+    end
+
+    it "rejects invalid updates without changing the saved parameters" do
+      transformation.save!
+
+      expect(transformation.update(input_json: {})).to be false
+      expect(transformation.errors[:input_json].join).to include("name")
+      expect(transformation.reload.input_json).to eq("name" => "email")
+    end
+
+    it "uses constraints from the selected catalog schema" do
+      schema = column_transformer.input_schema.deep_dup
+      schema["properties"]["name"]["minLength"] = 10
+      column_transformer.update!(input_schema: schema)
+
+      expect(transformation).not_to be_valid
+      expect(transformation.errors[:input_json].join).to include("/name")
+
+      transformation.input_json = { "name" => "contact_email" }
+
+      expect(transformation).to be_valid
+    end
+
+    it "reports an invalid catalog schema as an error instead of raising" do
+      column_transformer.input_schema = { "type" => "unknown" }
+
+      expect(transformation).not_to be_valid
+      expect(transformation.errors[:input_json].join).to include("catalog input schema is invalid")
+    end
+  end
+
+  it "allows NULL parameters when the transformer has no schema" do
+    column_transformer.update!(input_schema: nil)
+    transformation.input_json = nil
+    transformation.save!
+
+    expect(transformation.reload.input_json).to be_nil
+  end
+
+  it "allows omitted parameters when the transformer has no schema" do
+    column_transformer.update!(input_schema: nil)
+    rule = described_class.create!(transform_map: transform_map, output_column: output_column,
+                                   column_transformer: column_transformer)
+
+    expect(rule.reload.input_json).to eq({})
   end
 
   describe "database constraints" do
@@ -129,7 +206,7 @@ RSpec.describe Transformation, type: :model do
     end
 
     # insert_all! bypasses model validations; savepoints isolate expected SQL failures.
-    [:transform_map_id, :output_column_id, :column_transformer_id, :input_json].each do |attribute|
+    [:transform_map_id, :output_column_id, :column_transformer_id].each do |attribute|
       it "rejects a NULL #{attribute} without model validation" do
         expect do
           described_class.transaction(requires_new: true) do

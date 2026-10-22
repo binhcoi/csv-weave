@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe ColumnTransformer, type: :model do
   subject(:transformer) do
-    described_class.new(processor_class: "CopyTransformer", description: "Copies a source value")
+    FactoryBot.build(:column_transformer)
   end
 
   it "persists its processor class and description" do
@@ -14,7 +14,7 @@ RSpec.describe ColumnTransformer, type: :model do
   end
 
   it "allows an omitted description" do
-    transformer = described_class.create!(processor_class: "CopyTransformer")
+    transformer = FactoryBot.create(:column_transformer, description: nil)
 
     expect(transformer.reload.description).to be_nil
   end
@@ -39,7 +39,7 @@ RSpec.describe ColumnTransformer, type: :model do
 
   it "rejects duplicate catalog entries for the same processor" do
     transformer.save!
-    duplicate = described_class.new(processor_class: "CopyTransformer")
+    duplicate = FactoryBot.build(:column_transformer)
 
     expect(duplicate).not_to be_valid
     expect(duplicate.errors.of_kind?(:processor_class, :taken)).to be true
@@ -79,7 +79,7 @@ RSpec.describe ColumnTransformer, type: :model do
     it "rejects a NULL processor class without model validation" do
       expect do
         described_class.transaction(requires_new: true) do
-          described_class.insert_all!([{ processor_class: nil }])
+          described_class.insert_all!([{ processor_class: nil, input_schema: transformer.input_schema }])
         end
       end.to raise_error(ActiveRecord::NotNullViolation)
     end
@@ -89,7 +89,7 @@ RSpec.describe ColumnTransformer, type: :model do
 
       expect do
         described_class.transaction(requires_new: true) do
-          described_class.insert_all!([{ processor_class: "CopyTransformer" }])
+          described_class.insert_all!([{ processor_class: "CopyTransformer", input_schema: transformer.input_schema }])
         end
       end.to raise_error(ActiveRecord::RecordNotUnique)
     end
