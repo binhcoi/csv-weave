@@ -5,9 +5,19 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
-  post "file_types" => "file_types#create"
-  get "file_types" => "file_types#index"
-  get "file_types/:id" => "file_types#show"
+  resources :file_types, only: [:index, :show, :create]
+  resources :columns, only: [:index, :show, :create, :update]
+  resources :transform_maps, only: [:index, :show, :create, :update, :destroy]
+  resources :validations, only: [:index, :show, :create, :update, :destroy] do
+    post "bulk", on: :collection, action: :bulk_create
+    patch "bulk", on: :collection, action: :bulk_update
+  end
+  resources :transformations, only: [:index, :show, :create, :update, :destroy] do
+    post "bulk", on: :collection, action: :bulk_create
+    patch "bulk", on: :collection, action: :bulk_update
+  end
+  resources :column_validators, only: :index
+  resources :column_transformers, only: :index
   # Defines the root path route ("/")
   # root "posts#index"
 end

@@ -39,6 +39,6 @@ class FileTypesController < ApplicationController
   private
 
   def file_type_params
-    params.require(:file_type).permit(:name, :description)
+    params.expect(file_type: [:name, :description])
   end
 end
