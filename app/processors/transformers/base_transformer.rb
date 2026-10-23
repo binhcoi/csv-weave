@@ -1,8 +1,7 @@
 module Transformers
   class BaseTransformer
-    def initialize(column, input_json)
-      @column = column
-      @input_json = input_json
+    def initialize(transformation)
+      @transformation = transformation
     end
 
     def transform(source, destination)
@@ -12,6 +11,9 @@ module Transformers
     def column_data(row, name, position)
       # TODO: implement source-column selection when row processing is defined.
       raise NotImplementedError, "Transformer row access is not implemented"
+    end
+
+    def validate
     end
   end
 end

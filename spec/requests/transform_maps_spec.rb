@@ -7,6 +7,7 @@ RSpec.describe "Transform maps", type: :request do
     TransformMap.create!(name: "Customer conversion", input_file_type: input_type, output_file_type: output_type)
   end
   let(:transformation) do
+    input_type.columns.create!(name: "email", position: 0)
     output_column = output_type.columns.create!(name: "email", position: 0)
     Transformation.create!(transform_map: mapping, output_column: output_column,
                            column_transformer: FactoryBot.create(:column_transformer),

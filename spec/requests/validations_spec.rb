@@ -100,4 +100,13 @@ RSpec.describe "Validations", type: :request do
   end
 
   include_examples "atomic rule bulk writes", "/validations", :validations, Validation
+
+  it "preserves explicit NULL JSON values in bulk updates when the catalog has no schema" do
+    rows = bulk_records.map { |record| { id: record.id, input_json: nil } }
+
+    patch "/validations/bulk", params: { validations: rows }, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(bulk_records.map { |record| record.reload.input_json }).to eq([nil, nil])
+  end
 end

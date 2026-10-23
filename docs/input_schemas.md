@@ -4,7 +4,7 @@
 parameters accepted by a processor. They use standard JSON Schema, validated by
 the `json_schemer` gem. Schemas are maintained in `db/seeds.rb`.
 
-A `nil` schema skips parameter validation. `RequiredValidator` uses this because
+A `nil` schema skips JSON Schema validation. `RequiredValidator` uses this because
 it needs no parameters. Its `Validation` can omit `input_json` or supply `nil`.
 Omitted parameters still default to `{}` in the database.
 
@@ -22,8 +22,7 @@ Omitted parameters still default to `{}` in the database.
 ```
 
 This accepts `{"name": "email"}`. It rejects missing, empty, or non-string names,
-unexpected properties, and non-object parameters. Whether the named column exists
-in the selected file type is a separate configuration check planned for M2.
+unexpected properties, and non-object parameters.
 
 When a schema is present, `Validation` and `Transformation` validate `input_json`
 before saving. Failures appear in `errors[:input_json]`, including the affected

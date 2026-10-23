@@ -46,16 +46,15 @@ RSpec.describe ColumnTransformer, type: :model do
   end
 
   describe "#get_transformer" do
-    let(:column) { Column.new(name: "email", position: 0) }
-    let(:input_json) { { "name" => "source_email" } }
+    let(:transformation) { Transformation.new(input_json: { "name" => "source_email" }) }
 
-    it "resolves a saved catalog entry and passes its configuration to the processor" do
+    it "resolves a saved catalog entry and passes the transformation to the processor" do
       transformer.save!
       transformer.reload
 
-      expect(Transformers::CopyTransformer).to receive(:new).with(column, input_json).and_call_original
+      expect(Transformers::CopyTransformer).to receive(:new).with(transformation).and_call_original
 
-      expect(transformer.get_transformer(column, input_json)).to be_an_instance_of(Transformers::CopyTransformer)
+      expect(transformer.get_transformer(transformation)).to be_an_instance_of(Transformers::CopyTransformer)
     end
 
     {
@@ -68,9 +67,10 @@ RSpec.describe ColumnTransformer, type: :model do
     }.each do |description, value|
       it "rejects an unsaved #{description} identifier before resolving any class" do
         transformer.processor_class = value
+        transformation
 
         expect(ActiveSupport::Inflector).not_to receive(:constantize)
-        expect { transformer.get_transformer(column, input_json) }.to raise_error(ArgumentError, /transformer/)
+        expect { transformer.get_transformer(transformation) }.to raise_error(ArgumentError, /transformer/)
       end
     end
   end

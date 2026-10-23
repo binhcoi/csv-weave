@@ -15,6 +15,12 @@ RSpec.describe Transformation, type: :model do
   let(:output_column) { Column.create!(file_type: output_file_type, name: "email", position: 0) }
   let(:column_transformer) { FactoryBot.create(:column_transformer) }
 
+  before do
+    ["email", "contact_email", "customer_id"].each_with_index do |name, position|
+      input_file_type.columns.create!(name: name, position: position)
+    end
+  end
+
   it "persists its map, output column, and transformer catalog entry" do
     transformation.save!
     transformation.reload
@@ -169,20 +175,32 @@ RSpec.describe Transformation, type: :model do
     end
   end
 
-  it "allows NULL parameters when the transformer has no schema" do
+  it "still requires a copy source when the catalog has no schema" do
     column_transformer.update!(input_schema: nil)
     transformation.input_json = nil
-    transformation.save!
 
-    expect(transformation.reload.input_json).to be_nil
+    expect(transformation.save).to be false
+    expect(transformation.errors[:input_json].join).to include("source column")
   end
 
-  it "allows omitted parameters when the transformer has no schema" do
+  it "rejects an omitted copy source when the catalog has no schema" do
     column_transformer.update!(input_schema: nil)
-    rule = described_class.create!(transform_map: transform_map, output_column: output_column,
-                                   column_transformer: column_transformer)
+    rule = described_class.new(transform_map: transform_map, output_column: output_column,
+                               column_transformer: column_transformer)
 
-    expect(rule.reload.input_json).to eq({})
+    expect(rule.save).to be false
+    expect(rule.errors[:input_json].join).to include("source column")
+  end
+
+  it "rechecks the source against a changed map before saving an update" do
+    transformation.save!
+    other_input = FileType.create!(name: "Other input")
+    other_map = TransformMap.create!(name: "Other map", input_file_type: other_input,
+                                    output_file_type: output_file_type)
+
+    expect(transformation.update(transform_map: other_map)).to be false
+    expect(transformation.errors[:input_json].join).to include('source column "email"')
+    expect(transformation.reload.transform_map).to eq(transform_map)
   end
 
   describe "database constraints" do

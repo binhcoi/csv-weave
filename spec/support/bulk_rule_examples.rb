@@ -88,16 +88,6 @@ RSpec.shared_examples "atomic rule bulk writes" do |path, collection_key, rule_c
     expect(first.reload.input_json).to eq(original)
   end
 
-  it "preserves explicit NULL JSON values in bulk updates when the catalog has no schema" do
-    catalog.update!(input_schema: nil)
-    rows = bulk_records.map { |record| { id: record.id, input_json: nil } }
-
-    patch "#{path}/bulk", params: { collection_key => rows }, as: :json
-
-    expect(response).to have_http_status(:ok)
-    expect(bulk_records.map { |record| record.reload.input_json }).to eq([nil, nil])
-  end
-
   { "empty array" => [], "object" => { id: 1 }, "non-object item" => ["invalid"] }.each do |name, payload|
     it "rejects a bulk #{name} payload with status 400" do
       expect do

@@ -31,6 +31,5 @@
 # Ignore key files for decrypting credentials and more.
 /config/*.key
 
-/CSVWeave_Plan.md
+/private/*
 /docker_test.sh
-/progress.md

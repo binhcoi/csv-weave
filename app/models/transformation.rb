@@ -6,8 +6,15 @@ class Transformation < ApplicationRecord
   validates :output_column_id, uniqueness: { scope: :transform_map_id }
   validates :input_json, input_json: { catalog: :column_transformer }
   validate :output_column_belongs_to_map
+  validate :processor_configuration_is_valid
 
   private
+
+  def processor_configuration_is_valid
+    return if errors.any?
+
+    column_transformer.get_transformer(self).validate
+  end
 
   def output_column_belongs_to_map
     return unless transform_map && output_column

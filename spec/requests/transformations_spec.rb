@@ -19,6 +19,12 @@ RSpec.describe "Transformations", type: :request do
   let(:invalid_row) { create_rows.last.merge(input_json: { "name" => 123 }) }
   let(:transformation) { Transformation.create!(create_rows.first) }
 
+  before do
+    ["email", "customer_id", "updated_source"].each_with_index do |name, position|
+      input_type.columns.create!(name: name, position: position)
+    end
+  end
+
   it "creates a transformation from permitted fields" do
     expect do
       post "/transformations", params: { transformation: create_rows.first.merge(id: -1) }, as: :json
@@ -40,6 +46,43 @@ RSpec.describe "Transformations", type: :request do
 
     expect(response).to have_http_status(422)
     expect(response.parsed_body.fetch("errors").fetch("input_json").join).to include("/name")
+  end
+
+  it "rejects a source that exists only in the output file type" do
+    other_column.update!(name: "output_only")
+
+    expect do
+      post "/transformations", params: { transformation: create_rows.last }, as: :json
+    end.not_to change(Transformation, :count)
+
+    expect(response).to have_http_status(422)
+    expect(response.parsed_body).to eq(
+      "errors" => { "input_json" => ['source column "output_only" does not exist in the map\'s input file type'] },
+    )
+  end
+
+  it "rejects updates to a nonexistent source without changing the saved rule" do
+    patch "/transformations/#{transformation.id}", params: {
+      transformation: { input_json: { name: "missing_source" } },
+    }, as: :json
+
+    expect(response).to have_http_status(422)
+    expect(response.parsed_body.fetch("errors").fetch("input_json").join).to include('"missing_source"')
+    expect(transformation.reload.input_json).to eq("name" => "email")
+  end
+
+  it "rolls back bulk creation when a later source does not exist" do
+    rows = [create_rows.first, create_rows.last.merge(input_json: { name: "missing_source" })]
+
+    expect do
+      post "/transformations/bulk", params: { transformations: rows }, as: :json
+    end.not_to change(Transformation, :count)
+
+    expect(response).to have_http_status(422)
+    expect(response.parsed_body.fetch("errors").first).to eq(
+      "index" => 1,
+      "errors" => { "input_json" => ['source column "missing_source" does not exist in the map\'s input file type'] },
+    )
   end
 
   it "lists only transformations belonging to the requested map" do
@@ -85,7 +128,7 @@ RSpec.describe "Transformations", type: :request do
   end
 
   it "rejects an output column that belongs to another file type" do
-    wrong_column = input_type.columns.create!(name: "wrong", position: 0)
+    wrong_column = input_type.columns.create!(name: "wrong", position: 3)
 
     post "/transformations", params: { transformation: create_rows.first.merge(output_column_id: wrong_column.id) }, as: :json
 
@@ -127,4 +170,18 @@ RSpec.describe "Transformations", type: :request do
   end
 
   include_examples "atomic rule bulk writes", "/transformations", :transformations, Transformation
+
+  it "rolls back bulk updates when a copy source is NULL even without a catalog schema" do
+    catalog.update!(input_schema: nil)
+    first, second = bulk_records
+
+    patch "/transformations/bulk", params: { transformations: [
+      { id: first.id, input_json: replacement_input }, { id: second.id, input_json: nil },
+    ] }, as: :json
+
+    expect(response).to have_http_status(422)
+    expect(response.parsed_body.fetch("errors").first.fetch("index")).to eq(1)
+    expect(first.reload.input_json).to eq("name" => "email")
+    expect(second.reload.input_json).to eq("name" => "customer_id")
+  end
 end
