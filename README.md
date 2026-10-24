@@ -12,11 +12,11 @@ This example illustrates the planned conversion of three rows of customer data.
 
 **Source rows**
 
-| customer_id | given_name | family_name | email | joined_on | credit_limit | phone | internal_note |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| C1042 | Alex | Morgan | alex@example.test | 12 Apr 2026 | 001250.50 | +1-415-555-0132 | Legacy import |
-| C1043 | Sam | Rivera | sam@example.test | 03 May 2026 | 000050.00 | +1-212-555-0478 | Partner upload |
-| C1044 | Jordan | Lee | jordan@example.test | 28 Jun 2026 | 000300.75 | +1-206-555-0926 | Manual entry |
+| given_name | family_name | joined_on | phone | internal_note |
+| --- | --- | --- | --- | --- |
+| Alex | Morgan | 12 Apr 2026 | +1-415-555-0132 | Legacy import |
+| Sam | Rivera | 03 May 2026 | +1-212-555-0478 | Partner upload |
+| Jordan | Lee | 28 Jun 2026 | +1-206-555-0926 | Manual entry |
 
 **Transformation map**
 
@@ -24,13 +24,10 @@ The table below lists the transformations that build the destination rows, along
 
 | Source | Instruction | Destination |
 | --- | --- | --- |
-| `customer_id` | Copy the value. | `external_id` |
 | `given_name`, `family_name` | Join with a space. | `full_name` |
-| `family_name`, `given_name` | Join with a comma and space. | `directory_name` |
-| `email` | Copy the value. | `contact_email` |
+| `family_name`, `given_name` | Join with a comma and space. | `sort_name` |
 | `joined_on` | Parse the date and write it as `YYYY-MM-DD`. | `joined_date` |
-| `credit_limit` | Parse the numeric value. | `credit_limit` |
-| `phone` | Copy the full value. | `contact_phone` |
+| `phone` | Copy the full value. | `phone` |
 | `phone` | Extract the final four characters. | `phone_last4` |
 | `internal_note` | Omit this source field. | None |
 | None | Leave this optional destination column blank. | `note` |
@@ -39,11 +36,11 @@ The table below lists the transformations that build the destination rows, along
 
 Applying the map produces the following values. Empty cells represent blank CSV fields.
 
-| external_id | full_name | directory_name | contact_email | joined_date | credit_limit | contact_phone | phone_last4 | note |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| C1042 | Alex Morgan | Morgan, Alex | alex@example.test | 2026-04-12 | 1250.50 | +1-415-555-0132 | 0132 | |
-| C1043 | Sam Rivera | Rivera, Sam | sam@example.test | 2026-05-03 | 50.00 | +1-212-555-0478 | 0478 | |
-| C1044 | Jordan Lee | Lee, Jordan | jordan@example.test | 2026-06-28 | 300.75 | +1-206-555-0926 | 0926 | |
+| full_name | sort_name | joined_date | phone | phone_last4 | note |
+| --- | --- | --- | --- | --- | --- |
+| Alex Morgan | Morgan, Alex | 2026-04-12 | +1-415-555-0132 | 0132 | |
+| Sam Rivera | Rivera, Sam | 2026-05-03 | +1-212-555-0478 | 0478 | |
+| Jordan Lee | Lee, Jordan | 2026-06-28 | +1-206-555-0926 | 0926 | |
 
 ## Design
 
