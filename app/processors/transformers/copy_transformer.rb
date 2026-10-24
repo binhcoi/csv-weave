@@ -18,5 +18,9 @@ module Transformers
       return "" unless input_json.is_a?(Hash)
       input_json["name"]
     end
+
+    def source_column_names
+      [source_column_name]
+    end
   end
 end

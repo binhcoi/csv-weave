@@ -79,7 +79,7 @@ RSpec.describe "Columns", type: :request do
     expect(column.position).to eq(0)
   end
 
-  [:get, :patch].each do |verb|
+  [:get, :patch, :delete].each do |verb|
     it "returns a JSON 404 when #{verb} targets a nonexistent column" do
       public_send(verb, "/columns/0", params: { column: { name: "missing" } })
 
@@ -88,12 +88,41 @@ RSpec.describe "Columns", type: :request do
     end
   end
 
-  it "does not expose column deletion" do
-    column
+  it "deletes a column and its validations while retaining other records" do
+    catalog = FactoryBot.create(:column_validator)
+    rule = column.validations.create!(column_validator: catalog)
+    other_column = file_type.columns.create!(name: "phone", position: 1)
+    other_rule = other_column.validations.create!(column_validator: catalog)
+
+    expect do
+      delete "/columns/#{column.id}", as: :json
+    end.to change(Column, :count).by(-1).and change(Validation, :count).by(-1)
+
+    expect(response).to have_http_status(:no_content)
+    expect(response.body).to be_empty
+    expect(Column.exists?(column.id)).to be false
+    expect(Validation.exists?(rule.id)).to be false
+    expect(FileType.exists?(file_type.id)).to be true
+    expect(ColumnValidator.exists?(catalog.id)).to be true
+    expect(Column.exists?(other_column.id)).to be true
+    expect(Validation.exists?(other_rule.id)).to be true
+  end
+
+  it "returns field errors and preserves validations when a transformation uses the column" do
+    catalog = FactoryBot.create(:column_validator)
+    rule = column.validations.create!(column_validator: catalog)
+    mapping = TransformMap.create!(name: "Same-format copy", input_file_type: file_type, output_file_type: file_type)
+    transformation = mapping.transformations.create!(output_column: column,
+                                                     column_transformer: FactoryBot.create(:column_transformer),
+                                                     input_json: { name: column.name })
+
     expect do
       delete "/columns/#{column.id}", as: :json
     end.not_to change(Column, :count)
 
-    expect(response).to have_http_status(:not_found)
+    expect(response).to have_http_status(422)
+    expect(response.parsed_body).to eq("errors" => { "base" => ["cannot delete a column used by a transformation"] })
+    expect(Validation.exists?(rule.id)).to be true
+    expect(Transformation.exists?(transformation.id)).to be true
   end
 end

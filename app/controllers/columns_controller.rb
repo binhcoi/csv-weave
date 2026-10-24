@@ -33,6 +33,16 @@ class ColumnsController < ApplicationController
     end
   end
 
+  # DELETE /columns/:id
+  def destroy
+    column = Column.find(params[:id])
+    if column.destroy
+      head :no_content
+    else
+      render json: { errors: column.errors.to_hash }, status: 422
+    end
+  end
+
   private
 
   def column_params

@@ -79,6 +79,57 @@ RSpec.describe Column, type: :model do
     end
   end
 
+  describe "deletion" do
+    let(:output_type) { FileType.create!(name: "Customer export") }
+    let(:output_column) { output_type.columns.create!(name: "contact_email", position: 0) }
+    let(:mapping) { TransformMap.create!(name: "Copy email", input_file_type: file_type, output_file_type: output_type) }
+    let(:transformation) do
+      mapping.transformations.create!(output_column: output_column,
+                                      column_transformer: FactoryBot.create(:column_transformer),
+                                      input_json: { name: column.name })
+    end
+
+    before { column.save! }
+
+    it "rejects deleting a source column and retains its validations" do
+      transformation
+      rule = column.validations.create!(column_validator: FactoryBot.create(:column_validator))
+
+      expect(column.destroy).to be false
+      expect(column.errors[:base]).to include("cannot delete a column used by a transformation")
+      expect(described_class.exists?(column.id)).to be true
+      expect(Validation.exists?(rule.id)).to be true
+      expect(Transformation.exists?(transformation.id)).to be true
+    end
+
+    it "rejects deleting an output column" do
+      transformation
+
+      expect(output_column.destroy).to be false
+      expect(output_column.errors[:base]).to include("cannot delete a column used by a transformation")
+      expect(described_class.exists?(output_column.id)).to be true
+    end
+
+    it "allows deleting an unused column in a map's input file type" do
+      transformation
+      unused_column = file_type.columns.create!(name: "phone", position: 1)
+
+      expect(unused_column.destroy).to eq(unused_column)
+      expect(described_class.exists?(unused_column.id)).to be false
+      expect(Transformation.exists?(transformation.id)).to be true
+    end
+
+    it "ignores matching source names in a different file type" do
+      transformation
+      other_type = FileType.create!(name: "Unrelated import")
+      unrelated_column = other_type.columns.create!(name: column.name, position: 0)
+
+      expect(unrelated_column.destroy).to eq(unrelated_column)
+      expect(described_class.exists?(unrelated_column.id)).to be false
+      expect(Transformation.exists?(transformation.id)).to be true
+    end
+  end
+
   describe "database constraints" do
     let(:attributes) { { file_type_id: file_type.id, name: "email", position: 0 } }
 

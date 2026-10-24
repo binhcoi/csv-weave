@@ -20,6 +20,10 @@ module Transformers
       raise NotImplementedError, "#{self.class} must implement #transform"
     end
 
+    def source_column_names
+      raise NotImplementedError, "#{self.class} must implement #source_column_names"
+    end
+
     def validate
     end
   end

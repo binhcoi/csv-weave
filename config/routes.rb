@@ -6,7 +6,7 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
   resources :file_types, only: [:index, :show, :create]
-  resources :columns, only: [:index, :show, :create, :update]
+  resources :columns, only: [:index, :show, :create, :update, :destroy]
   resources :transform_maps, only: [:index, :show, :create, :update, :destroy]
   resources :validations, only: [:index, :show, :create, :update, :destroy] do
     post "bulk", on: :collection, action: :bulk_create
