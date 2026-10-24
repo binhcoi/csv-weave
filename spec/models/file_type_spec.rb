@@ -36,6 +36,26 @@ RSpec.describe FileType, type: :model do
     expect(file_type.columns.reload.to_a).to eq([first_column, later_column])
   end
 
+  describe "deletion" do
+    [:input_file_type, :output_file_type].each do |role|
+      it "rejects deletion when a map uses it as #{role}, even without transformations" do
+        file_type.save!
+        column = file_type.columns.create!(name: "email", position: 0)
+        validation = column.validations.create!(column_validator: FactoryBot.create(:column_validator))
+        other_type = described_class.create!(name: "Other format")
+        mapping = TransformMap.create!({ name: "Customer conversion", input_file_type: other_type,
+                                         output_file_type: other_type }.merge(role => file_type))
+
+        expect(file_type.destroy).to be false
+        expect(file_type.errors[:base]).to include("cannot delete a file type used by a transform map")
+        expect(described_class.exists?(file_type.id)).to be true
+        expect(Column.exists?(column.id)).to be true
+        expect(Validation.exists?(validation.id)).to be true
+        expect(TransformMap.exists?(mapping.id)).to be true
+      end
+    end
+  end
+
   it "rejects a NULL name at the database level" do
     file_type.name = nil
 

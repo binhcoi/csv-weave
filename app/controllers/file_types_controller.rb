@@ -12,6 +12,16 @@ class FileTypesController < ApplicationController
     end
   end
 
+  # PATCH/PUT /file_types/:id
+  def update
+    file_type = FileType.find(params[:id])
+    if file_type.update(file_type_params)
+      render json: file_type, only: [:id, :name, :description]
+    else
+      render json: { errors: file_type.errors.to_hash }, status: 422
+    end
+  end
+
   # GET /file_types
   def index
     file_types = FileType.includes(:columns).order(:id)
@@ -34,6 +44,16 @@ class FileTypesController < ApplicationController
            }
   rescue ActiveRecord::RecordNotFound
     render json: { error: "File type not found" }, status: :not_found
+  end
+
+  # DELETE /file_types/:id
+  def destroy
+    file_type = FileType.find(params[:id])
+    if file_type.destroy
+      head :no_content
+    else
+      render json: { errors: file_type.errors.to_hash }, status: 422
+    end
   end
 
   private

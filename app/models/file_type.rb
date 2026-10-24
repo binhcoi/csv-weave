@@ -6,4 +6,14 @@ class FileType < ApplicationRecord
                          foreign_key: :output_file_type_id, inverse_of: :output_file_type
 
   validates :name, presence: true
+  before_destroy :reject_deletion_if_used_by_maps, prepend: true
+
+  private
+
+  def reject_deletion_if_used_by_maps
+    return unless input_maps.exists? || output_maps.exists?
+
+    errors.add(:base, "cannot delete a file type used by a transform map")
+    throw :abort
+  end
 end
