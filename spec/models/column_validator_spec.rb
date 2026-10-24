@@ -46,16 +46,15 @@ RSpec.describe ColumnValidator, type: :model do
   end
 
   describe "#get_validator" do
-    let(:column) { Column.new(name: "email", position: 0) }
-    let(:input_json) { {} }
+    let(:validation) { Validation.new(column: Column.new(name: "email", position: 0), input_json: nil) }
 
-    it "resolves a saved catalog entry and passes its configuration to the processor" do
+    it "resolves a saved catalog entry and passes the validation to the processor" do
       validator.save!
       validator.reload
 
-      expect(Validators::RequiredValidator).to receive(:new).with(column, input_json).and_call_original
+      expect(Validators::RequiredValidator).to receive(:new).with(validation).and_call_original
 
-      expect(validator.get_validator(column, input_json)).to be_an_instance_of(Validators::RequiredValidator)
+      expect(validator.get_validator(validation)).to be_an_instance_of(Validators::RequiredValidator)
     end
 
     {
@@ -68,9 +67,10 @@ RSpec.describe ColumnValidator, type: :model do
     }.each do |description, value|
       it "rejects an unsaved #{description} identifier before resolving any class" do
         validator.processor_class = value
+        validation
 
         expect(ActiveSupport::Inflector).not_to receive(:constantize)
-        expect { validator.get_validator(column, input_json) }.to raise_error(ArgumentError, /validator/)
+        expect { validator.get_validator(validation) }.to raise_error(ArgumentError, /validator/)
       end
     end
   end

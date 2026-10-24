@@ -7,6 +7,10 @@ class Column < ApplicationRecord
                        numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :file_type_matches_transformations, on: :update
 
+  def get_data(row)
+    row[name]
+  end
+
   private
 
   def file_type_matches_transformations

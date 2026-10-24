@@ -4,13 +4,20 @@ module Transformers
       @transformation = transformation
     end
 
-    def transform(source, destination)
-      raise NotImplementedError, "#{self.class} must implement #transform"
+    def input_columns
+      @transformation.transform_map.input_file_type.columns
     end
 
-    def column_data(row, name, position)
-      # TODO: implement source-column selection when row processing is defined.
-      raise NotImplementedError, "Transformer row access is not implemented"
+    def input_json
+      @transformation.input_json
+    end
+
+    def output_column_name
+      @transformation.output_column.name
+    end
+
+    def transform(source, destination)
+      raise NotImplementedError, "#{self.class} must implement #transform"
     end
 
     def validate
