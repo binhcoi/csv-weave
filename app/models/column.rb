@@ -1,6 +1,6 @@
 class Column < ApplicationRecord
   belongs_to :file_type
-  has_many :validations, dependent: :destroy
+  has_many :validations, -> { order(:id) }, dependent: :destroy
   has_many :transformations, foreign_key: :output_column_id, inverse_of: :output_column
   validates :name, presence: true, uniqueness: { scope: :file_type_id }
   validates :position, presence: true, uniqueness: { scope: :file_type_id },

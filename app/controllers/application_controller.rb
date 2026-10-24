@@ -8,6 +8,15 @@ class ApplicationController < ActionController::API
 
   private
 
+  def nested_items(payload, key)
+    items = payload.fetch(key, [])
+    unless items.is_a?(Array) && items.all? { |item| item.is_a?(ActionController::Parameters) }
+      raise ActionController::BadRequest, "#{key} must be an array of objects"
+    end
+
+    items
+  end
+
   def rule_parameters(payload, *references)
     unless payload.is_a?(ActionController::Parameters)
       raise ActionController::BadRequest, "Expected an object"

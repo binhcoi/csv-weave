@@ -40,22 +40,24 @@ class FileTypesController < ApplicationController
 
   # GET /file_types
   def index
-    file_types = FileType.includes(:columns).order(:id)
+    file_types = FileType.includes(columns: :validations).order(:id)
     render json: file_types, only: [:id, :name, :description],
            include: {
              columns: {
                only: [:id, :name, :description, :position],
+               include: { validations: { only: [:id, :column_validator_id, :input_json] } },
              },
            }
   end
 
   # GET /file_types/:id
   def show
-    file_type = FileType.find(params[:id])
+    file_type = FileType.includes(columns: :validations).find(params[:id])
     render json: file_type, only: [:id, :name, :description],
            include: {
              columns: {
                only: [:id, :name, :description, :position],
+               include: { validations: { only: [:id, :column_validator_id, :input_json] } },
              },
            }
   rescue ActiveRecord::RecordNotFound
@@ -76,14 +78,5 @@ class FileTypesController < ApplicationController
 
   def file_type_params
     params.expect(file_type: [:name, :description])
-  end
-
-  def nested_items(payload, key)
-    items = payload.fetch(key, [])
-    unless items.is_a?(Array) && items.all? { |item| item.is_a?(ActionController::Parameters) }
-      raise ActionController::BadRequest, "#{key} must be an array of objects"
-    end
-
-    items
   end
 end

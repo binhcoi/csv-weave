@@ -42,6 +42,107 @@ RSpec.describe "Transform maps", type: :request do
     expect(response.parsed_body.fetch("errors")).to have_key("input_file_type")
   end
 
+  describe "creation with nested transformations" do
+    let(:catalog) { FactoryBot.create(:column_transformer) }
+    let(:first_rule) do
+      { output_column_id: output_columns.first.id, column_transformer_id: catalog.id, input_json: { name: "email" } }
+    end
+    let(:second_rule) do
+      { output_column_id: output_columns.second.id, column_transformer_id: catalog.id, input_json: { name: "phone" } }
+    end
+    let(:output_columns) do
+      ["contact_email", "contact_phone", "optional_note"].each_with_index.map do |name, position|
+        output_type.columns.create!(name: name, position: position)
+      end
+    end
+    let(:payload) do
+      { name: "Nested conversion", input_file_type_id: input_type.id, output_file_type_id: output_type.id }
+    end
+
+    before do
+      input_type.columns.create!(name: "email", position: 0)
+      input_type.columns.create!(name: "phone", position: 1)
+      output_columns
+      catalog
+    end
+
+    it "creates multiple transformations, ignores supplied identities, and allows unmapped output columns" do
+      rules = [first_rule.merge(id: -1, transform_map_id: -1), second_rule]
+
+      expect do
+        post "/transform_maps", params: { transform_map: payload.merge(transformations: rules) }, as: :json
+      end.to change(TransformMap, :count).by(1).and change(Transformation, :count).by(2)
+
+      expect(response).to have_http_status(:created)
+      saved = TransformMap.find(response.parsed_body.fetch("id"))
+      expect(saved.transformations.pluck(:output_column_id, :column_transformer_id, :input_json)).to eq([
+        [output_columns.first.id, catalog.id, { "name" => "email" }],
+        [output_columns.second.id, catalog.id, { "name" => "phone" }],
+      ])
+      expect(saved.transformations.first.id).not_to eq(-1)
+      expect(saved.transformations.pluck(:transform_map_id)).to eq([saved.id, saved.id])
+      expect(saved.transformations.where(output_column: output_columns.last)).not_to exist
+    end
+
+    {
+      "duplicate output target" => [{ output_column_id: :first_output }, "output_column_id"],
+      "missing source column" => [{ input_json: { name: "missing" } }, "input_json"],
+      "invalid schema configuration" => [{ input_json: { name: 123 } }, "input_json"],
+      "missing transformer" => [{ column_transformer_id: 0 }, "column_transformer"],
+      "missing output column" => [{ output_column_id: 0 }, "output_column"],
+    }.each do |description, (attributes, field)|
+      it "rolls back the map and earlier transformations for a #{description}" do
+        invalid_rule = second_rule.merge(attributes)
+        invalid_rule[:output_column_id] = output_columns.first.id if invalid_rule[:output_column_id] == :first_output
+
+        expect do
+          post "/transform_maps", params: { transform_map: payload.merge(transformations: [first_rule, invalid_rule]) }, as: :json
+        end.not_to change { [TransformMap.count, Transformation.count] }
+
+        expect(response).to have_http_status(422)
+        expect(response.parsed_body.fetch("errors")).to have_key("transformations[1].#{field}")
+      end
+    end
+
+    it "rejects a target from another file type and rolls back the entire map" do
+      invalid_rule = second_rule.merge(output_column_id: input_type.columns.first.id)
+
+      expect do
+        post "/transform_maps", params: { transform_map: payload.merge(transformations: [first_rule, invalid_rule]) }, as: :json
+      end.not_to change { [TransformMap.count, Transformation.count] }
+
+      expect(response).to have_http_status(422)
+      expect(response.parsed_body.fetch("errors")).to have_key("transformations[1].output_column")
+    end
+
+    { "object" => {}, "NULL" => nil, "non-object item" => ["invalid"] }.each do |description, transformations|
+      it "returns JSON status 400 and rolls back the map for a malformed transformation #{description}" do
+        expect do
+          post "/transform_maps", params: { transform_map: payload.merge(transformations: transformations) }, as: :json
+        end.not_to change { [TransformMap.count, Transformation.count] }
+
+        expect(response).to have_http_status(:bad_request)
+        expect(response.parsed_body).to eq("error" => "transformations must be an array of objects")
+      end
+    end
+
+    it "accepts an empty transformation array" do
+      post "/transform_maps", params: { transform_map: payload.merge(transformations: []) }, as: :json
+
+      expect(response).to have_http_status(:created)
+      expect(TransformMap.find(response.parsed_body.fetch("id")).transformations).to be_empty
+    end
+  end
+
+  it "returns JSON status 400 when the required payload is missing" do
+    expect do
+      post "/transform_maps", params: {}, as: :json
+    end.not_to change(TransformMap, :count)
+
+    expect(response).to have_http_status(:bad_request)
+    expect(response.parsed_body).to include("error" => a_kind_of(String))
+  end
+
   it "lists maps by ID with their own transformation lists" do
     transformation
     empty_map = TransformMap.create!(name: "Alternative", input_file_type: input_type, output_file_type: output_type)

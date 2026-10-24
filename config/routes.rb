@@ -10,6 +10,7 @@ Rails.application.routes.draw do
   patch "file_types/:file_type_id/validations", to: "validations#bulk_modify"
   resources :columns, only: [:index, :show, :create, :update, :destroy]
   resources :transform_maps, only: [:index, :show, :create, :update, :destroy]
+  patch "transform_maps/:transform_map_id/transformations", to: "transformations#bulk_modify"
   resources :validations, only: [:index, :show, :create, :update, :destroy] do
     post "bulk", on: :collection, action: :bulk_create
     patch "bulk", on: :collection, action: :bulk_update

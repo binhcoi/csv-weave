@@ -307,10 +307,15 @@ RSpec.describe "File types", type: :request do
       expect(response.parsed_body).to eq([])
     end
 
-    it "returns file types in ID order with their own columns and only public fields" do
+    it "returns ordered file types, columns, and rules with only public fields" do
       first_type = FileType.create!(name: "Zulu import", description: "Incoming customer CSV")
       second_type = FileType.create!(name: "Alpha export")
+      empty_column = first_type.columns.create!(name: "phone", position: 2)
       column = first_type.columns.create!(name: "email", description: "Contact email", position: 0)
+      catalog = FactoryBot.create(:column_validator)
+      options = { "options" => [1, { "enabled" => true }] }
+      first_rule = column.validations.create!(column_validator: catalog, input_json: options)
+      second_rule = column.validations.create!(column_validator: catalog, input_json: nil)
 
       get "/file_types", as: :json
 
@@ -321,7 +326,14 @@ RSpec.describe "File types", type: :request do
           "name" => "Zulu import",
           "description" => "Incoming customer CSV",
           "columns" => [
-            { "id" => column.id, "name" => "email", "description" => "Contact email", "position" => 0 },
+            {
+              "id" => column.id, "name" => "email", "description" => "Contact email", "position" => 0,
+              "validations" => [
+                { "id" => first_rule.id, "column_validator_id" => catalog.id, "input_json" => options },
+                { "id" => second_rule.id, "column_validator_id" => catalog.id, "input_json" => nil },
+              ],
+            },
+            { "id" => empty_column.id, "name" => "phone", "description" => nil, "position" => 2, "validations" => [] },
           ],
         },
         {
@@ -335,11 +347,16 @@ RSpec.describe "File types", type: :request do
   end
 
   describe "GET /file_types/:id" do
-    it "returns the requested file type with its own columns and only public fields" do
+    it "returns only the requested file type's ordered columns and rules with public fields" do
       file_type = FileType.create!(name: "Customer import", description: "Incoming customer CSV")
+      empty_column = file_type.columns.create!(name: "phone", position: 2)
       column = file_type.columns.create!(name: "email", description: "Contact email", position: 0)
+      catalog = FactoryBot.create(:column_validator)
+      first_rule = column.validations.create!(column_validator: catalog, input_json: { "enabled" => true })
+      second_rule = column.validations.create!(column_validator: catalog, input_json: nil)
       other_type = FileType.create!(name: "Other file type")
-      other_type.columns.create!(name: "private_column", position: 0)
+      other_column = other_type.columns.create!(name: "private_column", position: 0)
+      other_column.validations.create!(column_validator: catalog)
 
       get "/file_types/#{file_type.id}", as: :json
 
@@ -349,7 +366,14 @@ RSpec.describe "File types", type: :request do
         "name" => "Customer import",
         "description" => "Incoming customer CSV",
         "columns" => [
-          { "id" => column.id, "name" => "email", "description" => "Contact email", "position" => 0 },
+          {
+            "id" => column.id, "name" => "email", "description" => "Contact email", "position" => 0,
+            "validations" => [
+              { "id" => first_rule.id, "column_validator_id" => catalog.id, "input_json" => { "enabled" => true } },
+              { "id" => second_rule.id, "column_validator_id" => catalog.id, "input_json" => nil },
+            ],
+          },
+          { "id" => empty_column.id, "name" => "phone", "description" => nil, "position" => 2, "validations" => [] },
         ],
       )
     end

@@ -16,12 +16,26 @@ class TransformMapsController < ApplicationController
 
   # POST /transform_maps
   def create
-    mapping = TransformMap.new(map_params)
-    if mapping.save
-      render json: mapping, only: FIELDS, status: :created
-    else
-      render json: { errors: mapping.errors.to_hash }, status: 422
+    payload = params.require(:transform_map)
+    unless payload.is_a?(ActionController::Parameters)
+      raise ActionController::BadRequest, "Expected an object"
     end
+
+    mapping = TransformMap.new(payload.permit(:name, :description, :input_file_type_id, :output_file_type_id))
+    error_prefix = ""
+
+    TransformMap.transaction do
+      mapping.save!
+      nested_items(payload, :transformations).each_with_index do |transformation_payload, index|
+        error_prefix = "transformations[#{index}]."
+        mapping.transformations.create!(rule_parameters(transformation_payload, :output_column_id, :column_transformer_id))
+      end
+    end
+
+    render json: mapping, only: FIELDS, status: :created
+  rescue ActiveRecord::RecordInvalid => error
+    errors = error.record.errors.to_hash.transform_keys { |field| "#{error_prefix}#{field}" }
+    render json: { errors: errors }, status: 422
   end
 
   # PATCH/PUT /transform_maps/:id
