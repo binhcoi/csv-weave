@@ -1,8 +1,9 @@
 # Validators
 
 A `Validation` attaches a catalog operation to a column. A processor's
-`validate(row)` reads that column by header from a `CSV::Row` and returns `true`
-or `false` without changing the row. Rules can belong to input or output columns.
+`validate(row)` reads the configured columns by header from a `CSV::Row` and
+returns `true` or `false` without changing the row. Rules can belong to input or
+output columns.
 The conversion API that coordinates these calls is still planned.
 
 The examples below are `input_json` settings. See [input schemas](input_schemas.md)
@@ -85,3 +86,32 @@ value's format. Either, both, or neither may be supplied; when both are present,
 
 Missing, null, empty, and whitespace-only fields pass; add a required rule to
 reject them. The row value is never changed or reformatted.
+
+## Same-row comparisons
+
+`StringComparisonValidator` and `NumericComparisonValidator` compare the rule's
+column on the left with `other_column` on the right. Both use these settings:
+
+```json
+{ "other_column": "maximum_amount", "operator": "<=" }
+```
+
+Both keys are required. `other_column` must be a nonempty string naming a column
+in the same file type. Define both columns before attaching the rule. Operators
+are `==`, `!=`, `<`, `<=`, `>`, and `>=`; additional settings are rejected.
+
+### StringComparisonValidator
+
+Uses case-sensitive lexicographic ordering: `"apple" < "pear"`, `"Apple" < "apple"`,
+and `"10" < "2"`. Nonblank values are converted to strings without trimming.
+Missing, null, empty, and whitespace-only fields compare as `""`.
+
+### NumericComparisonValidator
+
+Uses finite `BigDecimal` values, so `"2" < "10"` and `"2.00" == "2"`. Signs,
+surrounding whitespace, and exponent notation are accepted. Missing, null,
+empty, and whitespace-only fields compare as zero. Other invalid numeric values
+make every comparison fail, including `!=`.
+
+These validators compare blank values rather than skipping them. Normalization
+affects comparison only; neither validator changes the row.

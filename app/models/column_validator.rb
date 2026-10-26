@@ -5,6 +5,8 @@ class ColumnValidator < ApplicationRecord
     "RegexValidator",
     "NumericRangeValidator",
     "DateValidator",
+    "StringComparisonValidator",
+    "NumericComparisonValidator",
   ].freeze
 
   has_many :validations

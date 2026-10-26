@@ -28,7 +28,7 @@ RSpec.describe ColumnValidator, type: :model do
     end
   end
 
-  ["UnknownValidator", "BaseValidator", "Kernel"].each do |processor_class|
+  ["UnknownValidator", "BaseValidator", "ColumnComparisonValidator", "Kernel"].each do |processor_class|
     it "rejects the unsupported processor #{processor_class}" do
       validator.processor_class = processor_class
 
@@ -49,7 +49,9 @@ RSpec.describe ColumnValidator, type: :model do
     let(:validation) { Validation.new(column: Column.new(name: "email", position: 0), input_json: nil) }
 
     [Validators::RequiredValidator, Validators::LengthValidator,
-     Validators::RegexValidator, Validators::NumericRangeValidator, Validators::DateValidator].each do |processor_class|
+     Validators::RegexValidator, Validators::NumericRangeValidator,
+     Validators::DateValidator, Validators::StringComparisonValidator,
+     Validators::NumericComparisonValidator].each do |processor_class|
       it "resolves #{processor_class.name} and passes the validation to the processor" do
         validator.processor_class = processor_class.name.demodulize
         validator.save!
@@ -67,6 +69,7 @@ RSpec.describe ColumnValidator, type: :model do
       "whitespace" => " \t\n",
       "unknown" => "UnknownValidator",
       "base class" => "BaseValidator",
+      "comparison base class" => "ColumnComparisonValidator",
       "unrelated class" => "Kernel",
     }.each do |description, value|
       it "rejects an unsaved #{description} identifier before resolving any class" do

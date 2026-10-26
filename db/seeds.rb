@@ -8,6 +8,16 @@
 #     MovieGenre.find_or_create_by!(name: genre_name)
 #   end
 
+comparison_schema = {
+  type: "object",
+  properties: {
+    other_column: { type: "string", minLength: 1 },
+    operator: { type: "string", enum: ["==", "!=", "<", "<=", ">", ">="] },
+  },
+  required: ["other_column", "operator"],
+  additionalProperties: false,
+}
+
 validators = [
   {
     processor_class: "RequiredValidator",
@@ -63,6 +73,16 @@ validators = [
       required: ["format"],
       additionalProperties: false,
     },
+  },
+  {
+    processor_class: "StringComparisonValidator",
+    description: "Compare two same-row column values as strings in case-sensitive lexicographic order",
+    input_schema: comparison_schema,
+  },
+  {
+    processor_class: "NumericComparisonValidator",
+    description: "Compare two same-row column values as finite numbers",
+    input_schema: comparison_schema,
   },
 ]
 

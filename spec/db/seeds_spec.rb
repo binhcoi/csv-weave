@@ -11,6 +11,11 @@ RSpec.describe "Catalog seeds", type: :model do
                                          input_schema: { "type" => "object" })
     date_validator = FactoryBot.create(:column_validator, processor_class: "DateValidator",
                                       input_schema: { "type" => "object" })
+    string_comparison = FactoryBot.create(:column_validator, processor_class: "StringComparisonValidator",
+                                         input_schema: { "type" => "object" })
+    numeric_comparison = FactoryBot.create(:column_validator, processor_class: "NumericComparisonValidator",
+                                          input_schema: { "type" => "object" })
+    comparison_validators = [string_comparison, numeric_comparison]
     transformer = FactoryBot.create(:column_transformer, input_schema: { "type" => "object" })
     integer_transformer = FactoryBot.create(:column_transformer, processor_class: "IntegerParseTransformer",
                                            input_schema: { "type" => "object" })
@@ -25,17 +30,21 @@ RSpec.describe "Catalog seeds", type: :model do
     regex_validator.update!(description: "Outdated description", input_schema: nil)
     numeric_validator.update!(description: "Outdated description", input_schema: nil)
     date_validator.update!(description: "Outdated description", input_schema: nil)
+    comparison_validators.each { |catalog| catalog.update!(description: "Outdated description", input_schema: nil) }
     numeric_transformers.each { |catalog| catalog.update!(description: "Outdated description", input_schema: nil) }
     Rails.application.load_seed
 
     expect(ColumnValidator.pluck(:id)).to contain_exactly(validator.id, length_validator.id, regex_validator.id,
-                                                       numeric_validator.id, date_validator.id)
+                                                       numeric_validator.id, date_validator.id,
+                                                       string_comparison.id, numeric_comparison.id)
     expect(ColumnTransformer.pluck(:id)).to contain_exactly(transformer.id, integer_transformer.id, decimal_transformer.id)
     expect(validator.reload.description).to eq("Validate a column has a nonblank value")
     expect(length_validator.reload.description).to eq("Validate a column length is within range")
     expect(regex_validator.reload.description).to eq("Validate a column value against a regular expression")
     expect(numeric_validator.reload.description).to eq("Validate a column value is within an inclusive numeric range")
     expect(date_validator.reload.description).to eq("Validate a column date format and optional inclusive date range")
+    expect(string_comparison.reload.description).to eq("Compare two same-row column values as strings in case-sensitive lexicographic order")
+    expect(numeric_comparison.reload.description).to eq("Compare two same-row column values as finite numbers")
     expect(transformer.reload.description).to eq("Copy the value of an input column to an output column")
     expect(integer_transformer.reload.description).to eq("Parse an input column as a base-10 integer")
     expect(decimal_transformer.reload.description).to eq("Parse an input column as a finite decimal without losing precision")
@@ -60,6 +69,16 @@ RSpec.describe "Catalog seeds", type: :model do
       "required" => ["format"],
       "additionalProperties" => false,
     )
+    expect(string_comparison.input_schema).to eq(
+      "type" => "object",
+      "properties" => {
+        "other_column" => { "type" => "string", "minLength" => 1 },
+        "operator" => { "type" => "string", "enum" => ["==", "!=", "<", "<=", ">", ">="] },
+      },
+      "required" => ["other_column", "operator"],
+      "additionalProperties" => false,
+    )
+    expect(numeric_comparison.input_schema).to eq(string_comparison.input_schema)
     expect(transformer.input_schema).to eq(
       "type" => "object",
       "properties" => {
