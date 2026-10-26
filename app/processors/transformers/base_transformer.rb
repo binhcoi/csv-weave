@@ -24,7 +24,7 @@ module Transformers
       raise NotImplementedError, "#{self.class} must implement #source_column_names"
     end
 
-    def validate
+    def validate_configuration
     end
   end
 end

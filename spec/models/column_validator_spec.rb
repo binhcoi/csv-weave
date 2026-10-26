@@ -48,13 +48,16 @@ RSpec.describe ColumnValidator, type: :model do
   describe "#get_validator" do
     let(:validation) { Validation.new(column: Column.new(name: "email", position: 0), input_json: nil) }
 
-    it "resolves a saved catalog entry and passes the validation to the processor" do
-      validator.save!
-      validator.reload
+    [Validators::RequiredValidator, Validators::LengthValidator].each do |processor_class|
+      it "resolves #{processor_class.name} and passes the validation to the processor" do
+        validator.processor_class = processor_class.name.demodulize
+        validator.save!
+        validator.reload
 
-      expect(Validators::RequiredValidator).to receive(:new).with(validation).and_call_original
+        expect(processor_class).to receive(:new).with(validation).and_call_original
 
-      expect(validator.get_validator(validation)).to be_an_instance_of(Validators::RequiredValidator)
+        expect(validator.get_validator(validation)).to be_an_instance_of(processor_class)
+      end
     end
 
     {

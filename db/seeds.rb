@@ -14,6 +14,18 @@ validators = [
     description: "Validate a column has a nonblank value",
     input_schema: nil,
   },
+  {
+    processor_class: "LengthValidator",
+    description: "Validate a column length is within range",
+    input_schema: {
+      type: "object",
+      properties: {
+        min: { type: "integer", minimum: 0 },
+        max: { type: "integer", minimum: 0 },
+      },
+      additionalProperties: false,
+    },
+  },
 ]
 
 transformers = [

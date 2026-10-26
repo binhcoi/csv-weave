@@ -15,5 +15,8 @@ module Validators
     def validate(row)
       raise NotImplementedError, "#{self.class} must implement #validate"
     end
+
+    def validate_configuration
+    end
   end
 end

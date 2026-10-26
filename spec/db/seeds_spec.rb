@@ -3,15 +3,22 @@ require "rails_helper"
 RSpec.describe "Catalog seeds", type: :model do
   it "updates schemas and descriptions without duplicating existing catalog entries" do
     validator = FactoryBot.create(:column_validator, input_schema: { "type" => "object" })
+    length_validator = FactoryBot.create(:column_validator, processor_class: "LengthValidator",
+                                        input_schema: { "type" => "object" })
     transformer = FactoryBot.create(:column_transformer, input_schema: { "type" => "object" })
 
-    2.times { Rails.application.load_seed }
+    Rails.application.load_seed
+    length_schema = length_validator.reload.input_schema
+    length_validator.update!(description: "Outdated description", input_schema: nil)
+    Rails.application.load_seed
 
-    expect(ColumnValidator.pluck(:id)).to eq([validator.id])
+    expect(ColumnValidator.pluck(:id)).to contain_exactly(validator.id, length_validator.id)
     expect(ColumnTransformer.pluck(:id)).to eq([transformer.id])
     expect(validator.reload.description).to eq("Validate a column has a nonblank value")
+    expect(length_validator.reload.description).to eq("Validate a column length is within range")
     expect(transformer.reload.description).to eq("Copy the value of an input column to an output column")
     expect(validator.input_schema).to be_nil
+    expect(length_validator.input_schema).to eq(length_schema)
     expect(transformer.input_schema).to eq(
       "type" => "object",
       "properties" => { "name" => { "type" => "string", "minLength" => 1 } },
@@ -26,7 +33,8 @@ RSpec.describe "Catalog seeds", type: :model do
     column = Column.create!(file_type: file_type, name: "email", position: 0)
     map = TransformMap.create!(name: "Customer conversion", input_file_type: file_type,
                                output_file_type: file_type)
-    validation = Validation.create!(column: column, column_validator: ColumnValidator.first!)
+    validation = Validation.create!(column: column,
+                                    column_validator: ColumnValidator.find_by!(processor_class: "RequiredValidator"))
     transformation = Transformation.create!(transform_map: map, output_column: column,
                                             column_transformer: ColumnTransformer.first!,
                                             input_json: { "name" => "email" })

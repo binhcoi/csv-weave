@@ -1,6 +1,7 @@
 class ColumnValidator < ApplicationRecord
   PROCESSOR_CLASSES = [
     "RequiredValidator",
+    "LengthValidator",
   ].freeze
 
   has_many :validations

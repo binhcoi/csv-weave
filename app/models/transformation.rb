@@ -13,7 +13,7 @@ class Transformation < ApplicationRecord
   def processor_configuration_is_valid
     return if errors.any?
 
-    column_transformer.get_transformer(self).validate
+    column_transformer.get_transformer(self).validate_configuration
   end
 
   def output_column_belongs_to_map

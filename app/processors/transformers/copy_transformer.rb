@@ -8,10 +8,11 @@ module Transformers
       destination[output_column_name] = input_column.get_data(source)
     end
 
-    def validate
+    def validate_configuration
       return if input_columns.any? { |column| column.name == source_column_name }
 
-      @transformation.errors.add(:input_json, "source column #{source_column_name.inspect} does not exist in the map's input file type")
+      @transformation.errors
+        .add(:input_json, "source column #{source_column_name.inspect} does not exist in the map's input file type")
     end
 
     def source_column_name
