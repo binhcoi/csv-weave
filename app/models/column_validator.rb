@@ -4,6 +4,7 @@ class ColumnValidator < ApplicationRecord
     "LengthValidator",
     "RegexValidator",
     "NumericRangeValidator",
+    "DateValidator",
   ].freeze
 
   has_many :validations

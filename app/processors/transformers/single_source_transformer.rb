@@ -1,6 +1,8 @@
 module Transformers
   class SingleSourceTransformer < BaseTransformer
-    # input_json = { "source_column" => "source_column_name" }
+    # input_json = {
+    #   "source_column" => "source_column_name"
+    # }
     def transform(source, destination)
       input_column = input_columns.find { |column| column.name == source_column_name }
       unless input_column

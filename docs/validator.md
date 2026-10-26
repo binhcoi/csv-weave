@@ -64,3 +64,24 @@ and `BigDecimal` output values are also supported.
 CSV values are compared without conversion through `Float`. Fractional bounds
 have the precision of the configuration's JSON-number decoding. Missing, null,
 empty, and whitespace-only fields pass; add a required rule to reject them.
+
+## DateValidator
+
+```json
+{ "format": "%d/%m/%Y", "min": "2020-01-01", "max": "2030-12-31" }
+```
+
+Requires a Ruby `strptime` format describing a complete calendar, ordinal, or
+ISO week date. Examples include `%Y-%m-%d`, `%d/%m/%Y`, `%d %b %Y`, `%Y-%j`, and
+`%G-W%V-%u`. Formats missing date components are rejected when saving the rule.
+
+Values must be real Gregorian dates and match the format exactly, including
+padding and month-name case. Extra text or whitespace fails unless part of the
+format. A parsed date must format back to the original value.
+
+Optional `min` and `max` are inclusive dates in `YYYY-MM-DD`, regardless of the
+value's format. Either, both, or neither may be supplied; when both are present,
+`min <= max`. Invalid bounds and additional settings are rejected.
+
+Missing, null, empty, and whitespace-only fields pass; add a required rule to
+reject them. The row value is never changed or reformatted.

@@ -50,6 +50,20 @@ validators = [
       additionalProperties: false,
     },
   },
+  {
+    processor_class: "DateValidator",
+    description: "Validate a column date format and optional inclusive date range",
+    input_schema: {
+      type: "object",
+      properties: {
+        format: { type: "string", minLength: 1 },
+        min: { type: "string", minLength: 1 },
+        max: { type: "string", minLength: 1 },
+      },
+      required: ["format"],
+      additionalProperties: false,
+    },
+  },
 ]
 
 source_column_schema = {

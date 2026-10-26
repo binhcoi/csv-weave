@@ -2,7 +2,10 @@ require "bigdecimal"
 
 module Validators
   class NumericRangeValidator < BaseValidator
-    # input_json = { "min" => -10, "max" => 100.5 }
+    # input_json = {
+    #   "min" => -10,
+    #   "max" => 100.5
+    # }
     def validate(row)
       data = column.get_data(row)
       return true if data.blank?
