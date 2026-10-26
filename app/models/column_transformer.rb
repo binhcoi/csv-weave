@@ -3,6 +3,7 @@ class ColumnTransformer < ApplicationRecord
     "CopyTransformer",
     "IntegerParseTransformer",
     "DecimalParseTransformer",
+    "ConcatenateTransformer",
   ].freeze
 
   validates :processor_class, presence: true, inclusion: { in: PROCESSOR_CLASSES }, uniqueness: true

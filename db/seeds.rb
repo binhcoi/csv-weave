@@ -111,6 +111,19 @@ transformers = [
     description: "Parse an input column as a finite decimal without losing precision",
     input_schema: source_column_schema,
   },
+  {
+    processor_class: "ConcatenateTransformer",
+    description: "Join nonblank input column values in the configured order with an optional separator",
+    input_schema: {
+      type: "object",
+      properties: {
+        source_columns: { type: "array", minItems: 1, items: { type: "string", minLength: 1 } },
+        separator: { type: "string" },
+      },
+      required: ["source_columns"],
+      additionalProperties: false,
+    },
+  },
 ]
 
 ColumnValidator.transaction do

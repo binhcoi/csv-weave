@@ -10,9 +10,9 @@ The conversion API that coordinates these calls and collects their errors is
 still planned. See the [API reference](api.md#transformation-rules) for creating
 rules and [input schemas](input_schemas.md) for configuration validation.
 
-## Shared settings
+## Single-source settings
 
-All currently implemented transformers accept the same `input_json`:
+Copy, integer parse, and decimal parse accept the same `input_json`:
 
 ```json
 { "source_column": "amount" }
@@ -58,3 +58,26 @@ return an error such as `source column "amount" contains an invalid decimal`.
 
 For both numeric parsers, attach output validators to decide whether a blank
 result is acceptable.
+
+## ConcatenateTransformer
+
+```json
+{
+  "source_columns": ["given_name", "family_name"],
+  "separator": " "
+}
+```
+
+`source_columns` is a required, nonempty array of nonempty column-name strings
+from the map's input file type. Values are joined in this order, including any
+repeated source names. One source is allowed. `separator` is an optional string
+defaulting to `""`; additional settings are rejected.
+
+Missing CSV fields, null, empty, and whitespace-only values are skipped, so
+`["Alex", null, "Morgan"]` joined with a space becomes `"Alex Morgan"`. Nonblank
+values are not trimmed. If every value is blank, the result is `""` without an
+error; output validators decide whether that is acceptable.
+
+Every configured source must exist. A missing configured source prevents saving
+the rule; at runtime it clears the target and returns an error. All source names
+are reported to the existing column-deletion guard.

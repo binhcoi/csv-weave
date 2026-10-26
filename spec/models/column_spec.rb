@@ -109,6 +109,22 @@ RSpec.describe Column, type: :model do
       end
     end
 
+    it "protects every source in a concatenate rule, including later source entries" do
+      second_source = file_type.columns.create!(name: "phone", position: 1)
+      catalog = FactoryBot.create(:column_transformer, processor_class: "ConcatenateTransformer", input_schema: nil)
+      transformation = mapping.transformations.create!(output_column: output_column, column_transformer: catalog,
+                                                       input_json: { "source_columns" => [second_source.name, column.name] })
+      rule = column.validations.create!(column_validator: FactoryBot.create(:column_validator))
+
+      [second_source, column].each do |source|
+        expect(source.destroy).to be false
+        expect(source.errors[:base]).to include("cannot delete a column used by a transformation")
+        expect(described_class.exists?(source.id)).to be true
+      end
+      expect(Validation.exists?(rule.id)).to be true
+      expect(Transformation.exists?(transformation.id)).to be true
+    end
+
     it "rejects deleting an output column" do
       transformation
 

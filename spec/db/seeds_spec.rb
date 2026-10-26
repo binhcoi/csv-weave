@@ -22,6 +22,8 @@ RSpec.describe "Catalog seeds", type: :model do
     decimal_transformer = FactoryBot.create(:column_transformer, processor_class: "DecimalParseTransformer",
                                            input_schema: { "type" => "object" })
     numeric_transformers = [integer_transformer, decimal_transformer]
+    concatenate_transformer = FactoryBot.create(:column_transformer, processor_class: "ConcatenateTransformer",
+                                               input_schema: { "type" => "object" })
 
     Rails.application.load_seed
     length_schema = length_validator.reload.input_schema
@@ -32,12 +34,14 @@ RSpec.describe "Catalog seeds", type: :model do
     date_validator.update!(description: "Outdated description", input_schema: nil)
     comparison_validators.each { |catalog| catalog.update!(description: "Outdated description", input_schema: nil) }
     numeric_transformers.each { |catalog| catalog.update!(description: "Outdated description", input_schema: nil) }
+    concatenate_transformer.update!(description: "Outdated description", input_schema: nil)
     Rails.application.load_seed
 
     expect(ColumnValidator.pluck(:id)).to contain_exactly(validator.id, length_validator.id, regex_validator.id,
                                                        numeric_validator.id, date_validator.id,
                                                        string_comparison.id, numeric_comparison.id)
-    expect(ColumnTransformer.pluck(:id)).to contain_exactly(transformer.id, integer_transformer.id, decimal_transformer.id)
+    expect(ColumnTransformer.pluck(:id)).to contain_exactly(transformer.id, integer_transformer.id,
+                                                         decimal_transformer.id, concatenate_transformer.id)
     expect(validator.reload.description).to eq("Validate a column has a nonblank value")
     expect(length_validator.reload.description).to eq("Validate a column length is within range")
     expect(regex_validator.reload.description).to eq("Validate a column value against a regular expression")
@@ -48,6 +52,8 @@ RSpec.describe "Catalog seeds", type: :model do
     expect(transformer.reload.description).to eq("Copy the value of an input column to an output column")
     expect(integer_transformer.reload.description).to eq("Parse an input column as a base-10 integer")
     expect(decimal_transformer.reload.description).to eq("Parse an input column as a finite decimal without losing precision")
+    expect(concatenate_transformer.reload.description)
+      .to eq("Join nonblank input column values in the configured order with an optional separator")
     expect(validator.input_schema).to be_nil
     expect(length_validator.input_schema).to eq(length_schema)
     expect(regex_validator.input_schema).to eq(regex_schema)
@@ -90,6 +96,15 @@ RSpec.describe "Catalog seeds", type: :model do
     numeric_transformers.each do |catalog|
       expect(catalog.input_schema).to eq(transformer.input_schema)
     end
+    expect(concatenate_transformer.input_schema).to eq(
+      "type" => "object",
+      "properties" => {
+        "source_columns" => { "type" => "array", "minItems" => 1, "items" => { "type" => "string", "minLength" => 1 } },
+        "separator" => { "type" => "string" },
+      },
+      "required" => ["source_columns"],
+      "additionalProperties" => false,
+    )
   end
 
   it "validates saved rules against the seeded schemas" do
