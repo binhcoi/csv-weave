@@ -80,26 +80,33 @@ RSpec.describe Column, type: :model do
   end
 
   describe "deletion" do
+    let(:processor_class) { "CopyTransformer" }
     let(:output_type) { FileType.create!(name: "Customer export") }
     let(:output_column) { output_type.columns.create!(name: "contact_email", position: 0) }
     let(:mapping) { TransformMap.create!(name: "Copy email", input_file_type: file_type, output_file_type: output_type) }
     let(:transformation) do
       mapping.transformations.create!(output_column: output_column,
-                                      column_transformer: FactoryBot.create(:column_transformer),
-                                      input_json: { name: column.name })
+                                      column_transformer: FactoryBot.create(:column_transformer, processor_class: processor_class),
+                                      input_json: { source_column: column.name })
     end
 
     before { column.save! }
 
-    it "rejects deleting a source column and retains its validations" do
-      transformation
-      rule = column.validations.create!(column_validator: FactoryBot.create(:column_validator))
+    ["CopyTransformer", "IntegerParseTransformer", "DecimalParseTransformer"].each do |processor_name|
+      context "with #{processor_name}" do
+        let(:processor_class) { processor_name }
 
-      expect(column.destroy).to be false
-      expect(column.errors[:base]).to include("cannot delete a column used by a transformation")
-      expect(described_class.exists?(column.id)).to be true
-      expect(Validation.exists?(rule.id)).to be true
-      expect(Transformation.exists?(transformation.id)).to be true
+        it "rejects deleting a source column and retains its validations" do
+          transformation
+          rule = column.validations.create!(column_validator: FactoryBot.create(:column_validator))
+
+          expect(column.destroy).to be false
+          expect(column.errors[:base]).to include("cannot delete a column used by a transformation")
+          expect(described_class.exists?(column.id)).to be true
+          expect(Validation.exists?(rule.id)).to be true
+          expect(Transformation.exists?(transformation.id)).to be true
+        end
+      end
     end
 
     it "rejects deleting an output column" do

@@ -40,18 +40,30 @@ validators = [
   },
 ]
 
+source_column_schema = {
+  type: "object",
+  properties: {
+    source_column: { type: "string", minLength: 1 },
+  },
+  required: ["source_column"],
+  additionalProperties: false,
+}
+
 transformers = [
   {
     processor_class: "CopyTransformer",
     description: "Copy the value of an input column to an output column",
-    input_schema: {
-      type: "object",
-      properties: {
-        name: { type: "string", minLength: 1 },
-      },
-      required: ["name"],
-      additionalProperties: false,
-    },
+    input_schema: source_column_schema,
+  },
+  {
+    processor_class: "IntegerParseTransformer",
+    description: "Parse an input column as a base-10 integer",
+    input_schema: source_column_schema,
+  },
+  {
+    processor_class: "DecimalParseTransformer",
+    description: "Parse an input column as a finite decimal without losing precision",
+    input_schema: source_column_schema,
   },
 ]
 

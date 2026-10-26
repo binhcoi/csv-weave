@@ -11,7 +11,7 @@ RSpec.describe "Transform maps", type: :request do
     output_column = output_type.columns.create!(name: "email", position: 0)
     Transformation.create!(transform_map: mapping, output_column: output_column,
                            column_transformer: FactoryBot.create(:column_transformer),
-                           input_json: { "name" => "email" })
+                           input_json: { "source_column" => "email" })
   end
 
   it "creates a map from permitted fields" do
@@ -45,10 +45,10 @@ RSpec.describe "Transform maps", type: :request do
   describe "creation with nested transformations" do
     let(:catalog) { FactoryBot.create(:column_transformer) }
     let(:first_rule) do
-      { output_column_id: output_columns.first.id, column_transformer_id: catalog.id, input_json: { name: "email" } }
+      { output_column_id: output_columns.first.id, column_transformer_id: catalog.id, input_json: { source_column: "email" } }
     end
     let(:second_rule) do
-      { output_column_id: output_columns.second.id, column_transformer_id: catalog.id, input_json: { name: "phone" } }
+      { output_column_id: output_columns.second.id, column_transformer_id: catalog.id, input_json: { source_column: "phone" } }
     end
     let(:output_columns) do
       ["contact_email", "contact_phone", "optional_note"].each_with_index.map do |name, position|
@@ -76,8 +76,8 @@ RSpec.describe "Transform maps", type: :request do
       expect(response).to have_http_status(:created)
       saved = TransformMap.find(response.parsed_body.fetch("id"))
       expect(saved.transformations.pluck(:output_column_id, :column_transformer_id, :input_json)).to eq([
-        [output_columns.first.id, catalog.id, { "name" => "email" }],
-        [output_columns.second.id, catalog.id, { "name" => "phone" }],
+        [output_columns.first.id, catalog.id, { "source_column" => "email" }],
+        [output_columns.second.id, catalog.id, { "source_column" => "phone" }],
       ])
       expect(saved.transformations.first.id).not_to eq(-1)
       expect(saved.transformations.pluck(:transform_map_id)).to eq([saved.id, saved.id])
@@ -86,8 +86,8 @@ RSpec.describe "Transform maps", type: :request do
 
     {
       "duplicate output target" => [{ output_column_id: :first_output }, "output_column_id"],
-      "missing source column" => [{ input_json: { name: "missing" } }, "input_json"],
-      "invalid schema configuration" => [{ input_json: { name: 123 } }, "input_json"],
+      "missing source column" => [{ input_json: { source_column: "missing" } }, "input_json"],
+      "invalid schema configuration" => [{ input_json: { source_column: 123 } }, "input_json"],
       "missing transformer" => [{ column_transformer_id: 0 }, "column_transformer"],
       "missing output column" => [{ output_column_id: 0 }, "output_column"],
     }.each do |description, (attributes, field)|
@@ -155,7 +155,7 @@ RSpec.describe "Transform maps", type: :request do
       {
         "id" => transformation.id, "transform_map_id" => mapping.id,
         "output_column_id" => transformation.output_column_id,
-        "column_transformer_id" => transformation.column_transformer_id, "input_json" => { "name" => "email" },
+        "column_transformer_id" => transformation.column_transformer_id, "input_json" => { "source_column" => "email" },
       },
     ])
     expect(response.parsed_body.last.fetch("transformations")).to eq([])
@@ -176,7 +176,7 @@ RSpec.describe "Transform maps", type: :request do
       "transformations" => [{
         "id" => transformation.id, "transform_map_id" => mapping.id,
         "output_column_id" => transformation.output_column_id,
-        "column_transformer_id" => transformation.column_transformer_id, "input_json" => { "name" => "email" },
+        "column_transformer_id" => transformation.column_transformer_id, "input_json" => { "source_column" => "email" },
       }],
     )
   end

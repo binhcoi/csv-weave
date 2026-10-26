@@ -16,6 +16,8 @@ module Transformers
       @transformation.output_column.name
     end
 
+    # Write to destination and return nil on success or an error message on failure.
+    # Expected failures clear the target field and preserve other fields.
     def transform(source, destination)
       raise NotImplementedError, "#{self.class} must implement #transform"
     end

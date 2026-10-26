@@ -15,7 +15,7 @@ RSpec.describe Transformers::CopyTransformer do
   let(:mapping) { TransformMap.new(input_file_type: input_type, output_file_type: output_type) }
   let(:transformation) do
     Transformation.new(transform_map: mapping, output_column: output_column,
-                       input_json: { "name" => "source_email" })
+                       input_json: { "source_column" => "source_email" })
   end
   let(:source) { CSV::Row.new(["other", "source_email"], ["unrelated", value]) }
   let(:destination) { CSV::Row.new(["contact_email", "optional", "existing"], [nil, nil, "retain"]) }
@@ -32,7 +32,7 @@ RSpec.describe Transformers::CopyTransformer do
       it "copies by header to the renamed output and preserves the other fields" do
         original = source.to_h
 
-        processor.transform(source, destination)
+        expect(processor.transform(source, destination)).to be_nil
 
         expect(destination.to_h).to eq("contact_email" => value, "optional" => nil, "existing" => "retain")
         expect(destination.headers).to eq(["contact_email", "optional", "existing"])
@@ -45,7 +45,7 @@ RSpec.describe Transformers::CopyTransformer do
     source = CSV::Row.new(["other"], ["unrelated"])
     destination["contact_email"] = "previous"
 
-    processor.transform(source, destination)
+    expect(processor.transform(source, destination)).to be_nil
 
     expect(destination.to_h).to eq("contact_email" => nil, "optional" => nil, "existing" => "retain")
   end

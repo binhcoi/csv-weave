@@ -114,7 +114,7 @@ RSpec.describe "Columns", type: :request do
     mapping = TransformMap.create!(name: "Same-format copy", input_file_type: file_type, output_file_type: file_type)
     transformation = mapping.transformations.create!(output_column: column,
                                                      column_transformer: FactoryBot.create(:column_transformer),
-                                                     input_json: { name: column.name })
+                                                     input_json: { source_column: column.name })
 
     expect do
       delete "/columns/#{column.id}", as: :json

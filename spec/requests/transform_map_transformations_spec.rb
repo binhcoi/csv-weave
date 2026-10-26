@@ -14,10 +14,10 @@ RSpec.describe "Transform-map bulk transformation changes", type: :request do
     end
   end
   let(:first_attributes) do
-    { output_column_id: columns.first.id, column_transformer_id: catalog.id, input_json: { name: "email" } }
+    { output_column_id: columns.first.id, column_transformer_id: catalog.id, input_json: { source_column: "email" } }
   end
   let(:second_attributes) do
-    { output_column_id: columns.second.id, column_transformer_id: catalog.id, input_json: { name: "phone" } }
+    { output_column_id: columns.second.id, column_transformer_id: catalog.id, input_json: { source_column: "phone" } }
   end
   let(:rule) { mapping.transformations.create!(first_attributes) }
 
@@ -38,7 +38,7 @@ RSpec.describe "Transform-map bulk transformation changes", type: :request do
     foreign_rule = foreign_map.transformations.create!(first_attributes)
 
     patch path, params: { remove_ids: [first.id, second.id], add: [
-      first_attributes.merge(id: -1, transform_map_id: foreign_map.id, input_json: { name: "updated_source" }),
+      first_attributes.merge(id: -1, transform_map_id: foreign_map.id, input_json: { source_column: "updated_source" }),
       second_attributes,
     ] }, as: :json
 
@@ -49,21 +49,21 @@ RSpec.describe "Transform-map bulk transformation changes", type: :request do
     expect(body.first.fetch("id")).to eq(kept.id)
     expect(body.map { |item| item.fetch("transform_map_id") }).to eq([mapping.id] * 3)
     expect(body.map { |item| item.fetch("output_column_id") }).to eq([columns.last.id, columns.first.id, columns.second.id])
-    expect(body[1].fetch("input_json")).to eq("name" => "updated_source")
+    expect(body[1].fetch("input_json")).to eq("source_column" => "updated_source")
     expect(body.last.keys).to match_array(%w[id transform_map_id output_column_id column_transformer_id input_json])
     saved = mapping.transformations.reload.map do |record|
       record.attributes.slice("id", "transform_map_id", "output_column_id", "column_transformer_id", "input_json")
     end
     expect(saved).to eq(body)
     expect(Transformation.where(id: [first.id, second.id])).not_to exist
-    expect(foreign_rule.reload.input_json).to eq("name" => "email")
+    expect(foreign_rule.reload.input_json).to eq("source_column" => "email")
     expect(Column.where(id: columns.map(&:id)).count).to eq(3)
     expect(ColumnTransformer.exists?(catalog.id)).to be true
   end
 
   it "accepts additions without removals and preserves arbitrary JSON allowed by the catalog" do
     catalog.update!(input_schema: nil)
-    options = { name: "email", options: [1, { enabled: true }] }
+    options = { source_column: "email", options: [1, { enabled: true }] }
 
     expect do
       patch path, params: { add: [first_attributes.merge(input_json: options), second_attributes] }, as: :json
@@ -101,8 +101,8 @@ RSpec.describe "Transform-map bulk transformation changes", type: :request do
   end
 
   {
-    "invalid schema configuration" => [{ input_json: { name: 123 } }, "input_json"],
-    "missing source" => [{ input_json: { name: "missing" } }, "input_json"],
+    "invalid schema configuration" => [{ input_json: { source_column: 123 } }, "input_json"],
+    "missing source" => [{ input_json: { source_column: "missing" } }, "input_json"],
     "nonexistent catalog" => [{ column_transformer_id: 0 }, "column_transformer"],
   }.each do |description, (attributes, field)|
     it "restores removals and rolls back earlier additions for a later #{description}" do
@@ -110,14 +110,14 @@ RSpec.describe "Transform-map bulk transformation changes", type: :request do
 
       expect do
         patch path, params: { remove_ids: [original.id], add: [
-          first_attributes.merge(input_json: { name: "updated_source" }), second_attributes.merge(attributes),
+          first_attributes.merge(input_json: { source_column: "updated_source" }), second_attributes.merge(attributes),
         ] }, as: :json
       end.not_to change(Transformation, :count)
 
       expect(response).to have_http_status(422)
       expect(response.parsed_body.fetch("errors")).to have_key("add[1].#{field}")
       expect(mapping.transformations.reload.pluck(:id)).to eq([original.id])
-      expect(original.reload.input_json).to eq("name" => "email")
+      expect(original.reload.input_json).to eq("source_column" => "email")
     end
   end
 

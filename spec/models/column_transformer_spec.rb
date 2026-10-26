@@ -28,7 +28,7 @@ RSpec.describe ColumnTransformer, type: :model do
     end
   end
 
-  ["UnknownTransformer", "BaseTransformer", "Kernel"].each do |processor_class|
+  ["UnknownTransformer", "BaseTransformer", "SingleSourceTransformer", "Kernel"].each do |processor_class|
     it "rejects the unsupported processor #{processor_class}" do
       transformer.processor_class = processor_class
 
@@ -46,15 +46,18 @@ RSpec.describe ColumnTransformer, type: :model do
   end
 
   describe "#get_transformer" do
-    let(:transformation) { Transformation.new(input_json: { "name" => "source_email" }) }
+    let(:transformation) { Transformation.new(input_json: { "source_column" => "source_email" }) }
 
-    it "resolves a saved catalog entry and passes the transformation to the processor" do
-      transformer.save!
-      transformer.reload
+    [Transformers::CopyTransformer, Transformers::IntegerParseTransformer, Transformers::DecimalParseTransformer].each do |processor_class|
+      it "resolves #{processor_class.name} and passes the transformation to the processor" do
+        transformer.processor_class = processor_class.name.demodulize
+        transformer.save!
+        transformer.reload
 
-      expect(Transformers::CopyTransformer).to receive(:new).with(transformation).and_call_original
+        expect(processor_class).to receive(:new).with(transformation).and_call_original
 
-      expect(transformer.get_transformer(transformation)).to be_an_instance_of(Transformers::CopyTransformer)
+        expect(transformer.get_transformer(transformation)).to be_an_instance_of(processor_class)
+      end
     end
 
     {
@@ -63,6 +66,7 @@ RSpec.describe ColumnTransformer, type: :model do
       "whitespace" => " \t\n",
       "unknown" => "UnknownTransformer",
       "base class" => "BaseTransformer",
+      "single-source base class" => "SingleSourceTransformer",
       "unrelated class" => "Kernel"
     }.each do |description, value|
       it "rejects an unsaved #{description} identifier before resolving any class" do

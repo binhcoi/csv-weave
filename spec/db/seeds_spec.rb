@@ -8,29 +8,42 @@ RSpec.describe "Catalog seeds", type: :model do
     regex_validator = FactoryBot.create(:column_validator, processor_class: "RegexValidator",
                                        input_schema: { "type" => "object" })
     transformer = FactoryBot.create(:column_transformer, input_schema: { "type" => "object" })
+    integer_transformer = FactoryBot.create(:column_transformer, processor_class: "IntegerParseTransformer",
+                                           input_schema: { "type" => "object" })
+    decimal_transformer = FactoryBot.create(:column_transformer, processor_class: "DecimalParseTransformer",
+                                           input_schema: { "type" => "object" })
+    numeric_transformers = [integer_transformer, decimal_transformer]
 
     Rails.application.load_seed
     length_schema = length_validator.reload.input_schema
     regex_schema = regex_validator.reload.input_schema
     length_validator.update!(description: "Outdated description", input_schema: nil)
     regex_validator.update!(description: "Outdated description", input_schema: nil)
+    numeric_transformers.each { |catalog| catalog.update!(description: "Outdated description", input_schema: nil) }
     Rails.application.load_seed
 
     expect(ColumnValidator.pluck(:id)).to contain_exactly(validator.id, length_validator.id, regex_validator.id)
-    expect(ColumnTransformer.pluck(:id)).to eq([transformer.id])
+    expect(ColumnTransformer.pluck(:id)).to contain_exactly(transformer.id, integer_transformer.id, decimal_transformer.id)
     expect(validator.reload.description).to eq("Validate a column has a nonblank value")
     expect(length_validator.reload.description).to eq("Validate a column length is within range")
     expect(regex_validator.reload.description).to eq("Validate a column value against a regular expression")
     expect(transformer.reload.description).to eq("Copy the value of an input column to an output column")
+    expect(integer_transformer.reload.description).to eq("Parse an input column as a base-10 integer")
+    expect(decimal_transformer.reload.description).to eq("Parse an input column as a finite decimal without losing precision")
     expect(validator.input_schema).to be_nil
     expect(length_validator.input_schema).to eq(length_schema)
     expect(regex_validator.input_schema).to eq(regex_schema)
     expect(transformer.input_schema).to eq(
       "type" => "object",
-      "properties" => { "name" => { "type" => "string", "minLength" => 1 } },
-      "required" => ["name"],
+      "properties" => {
+        "source_column" => { "type" => "string", "minLength" => 1 },
+      },
+      "required" => ["source_column"],
       "additionalProperties" => false,
     )
+    numeric_transformers.each do |catalog|
+      expect(catalog.input_schema).to eq(transformer.input_schema)
+    end
   end
 
   it "validates saved rules against the seeded schemas" do
@@ -42,12 +55,12 @@ RSpec.describe "Catalog seeds", type: :model do
     validation = Validation.create!(column: column,
                                     column_validator: ColumnValidator.find_by!(processor_class: "RequiredValidator"))
     transformation = Transformation.create!(transform_map: map, output_column: column,
-                                            column_transformer: ColumnTransformer.first!,
-                                            input_json: { "name" => "email" })
+                                            column_transformer: ColumnTransformer.find_by!(processor_class: "CopyTransformer"),
+                                            input_json: { "source_column" => "email" })
 
     expect(validation.update(input_json: nil)).to be true
-    expect(transformation.update(input_json: { "name" => 123 })).to be false
+    expect(transformation.update(input_json: { "source_column" => 123 })).to be false
     expect(validation.reload.input_json).to be_nil
-    expect(transformation.reload.input_json).to eq("name" => "email")
+    expect(transformation.reload.input_json).to eq("source_column" => "email")
   end
 end

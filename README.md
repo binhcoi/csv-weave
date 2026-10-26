@@ -4,7 +4,7 @@
 
 CSVWeave brings file formats, validation rules, and field transformations into reusable definitions. Describe the data you receive, describe the data you need, and save a map between them. The project is designed to turn those definitions into repeatable conversions with an output CSV and a structured error report.
 
-**Work in progress:** Format and mapping configuration is implemented, along with required-value, length, and regex validators and a copy transformer. Additional processors and CSV conversion execution are planned.
+**Work in progress:** Format and mapping configuration is implemented, along with required-value, length, and regex validators and copy, integer parse, and decimal parse transformers. Additional processors and CSV conversion execution are planned.
 
 ## The workflow
 
@@ -74,8 +74,8 @@ The [API reference](docs/api.md) covers configuring formats, rules, and maps. Se
 | Area | Status |
 | --- | --- |
 | File formats, column rules, reusable maps, and operation catalogs | Implemented, including nested creation and atomic bulk editing. |
-| Required-value, length, and regex validators; copy transformer | Implemented with configuration and row-behavior coverage. |
-| Additional text, numeric, date, and cross-column operations | Planned. |
+| Required-value, length, and regex validators; copy and numeric parsing transformers | Implemented with configuration and row-behavior coverage. |
+| Additional text, numeric validation, date, and cross-column operations | Planned. |
 | Streaming conversion, ordered output, and structured error reports | Planned. |
 | All-or-nothing and valid-rows-only processing | Planned. |
 

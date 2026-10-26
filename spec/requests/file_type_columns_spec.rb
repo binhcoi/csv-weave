@@ -126,7 +126,7 @@ RSpec.describe "File-type bulk column changes", type: :request do
       mapping = TransformMap.create!(name: "Copy email", input_file_type: input_type, output_file_type: output_type)
       transformation = mapping.transformations.create!(output_column: target,
                                                        column_transformer: FactoryBot.create(:column_transformer),
-                                                       input_json: { name: "email" })
+                                                       input_json: { source_column: "email" })
 
       expect do
         patch path, params: { remove_ids: [unused.id, column.id], add: [{ name: "city", position: 2 }] }, as: :json

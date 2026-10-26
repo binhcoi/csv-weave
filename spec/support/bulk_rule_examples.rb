@@ -1,6 +1,6 @@
 RSpec.shared_examples "atomic rule bulk writes" do |path, collection_key, rule_class|
   let(:bulk_records) { create_rows.map { |attributes| rule_class.create!(attributes) } }
-  let(:replacement_input) { { "name" => "updated_source" } }
+  let(:replacement_input) { { "source_column" => "updated_source" } }
 
   it "bulk creates rules in request order and returns status 201" do
     rows = create_rows

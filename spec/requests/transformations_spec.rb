@@ -13,10 +13,10 @@ RSpec.describe "Transformations", type: :request do
   let(:create_rows) do
     [column, other_column].map do |target|
       { transform_map_id: mapping.id, output_column_id: target.id,
-        column_transformer_id: catalog.id, input_json: { "name" => target.name } }
+        column_transformer_id: catalog.id, input_json: { "source_column" => target.name } }
     end
   end
-  let(:invalid_row) { create_rows.last.merge(input_json: { "name" => 123 }) }
+  let(:invalid_row) { create_rows.last.merge(input_json: { "source_column" => 123 }) }
   let(:transformation) { Transformation.create!(create_rows.first) }
 
   before do
@@ -35,7 +35,7 @@ RSpec.describe "Transformations", type: :request do
     expect(saved.id).not_to eq(-1)
     expect(response.parsed_body).to eq(
       "id" => saved.id, "transform_map_id" => mapping.id, "output_column_id" => column.id,
-      "column_transformer_id" => catalog.id, "input_json" => { "name" => "email" },
+      "column_transformer_id" => catalog.id, "input_json" => { "source_column" => "email" },
     )
   end
 
@@ -45,7 +45,7 @@ RSpec.describe "Transformations", type: :request do
     end.not_to change(Transformation, :count)
 
     expect(response).to have_http_status(422)
-    expect(response.parsed_body.fetch("errors").fetch("input_json").join).to include("/name")
+    expect(response.parsed_body.fetch("errors").fetch("input_json").join).to include("/source_column")
   end
 
   it "rejects a source that exists only in the output file type" do
@@ -63,16 +63,16 @@ RSpec.describe "Transformations", type: :request do
 
   it "rejects updates to a nonexistent source without changing the saved rule" do
     patch "/transformations/#{transformation.id}", params: {
-      transformation: { input_json: { name: "missing_source" } },
+      transformation: { input_json: { source_column: "missing_source" } },
     }, as: :json
 
     expect(response).to have_http_status(422)
     expect(response.parsed_body.fetch("errors").fetch("input_json").join).to include('"missing_source"')
-    expect(transformation.reload.input_json).to eq("name" => "email")
+    expect(transformation.reload.input_json).to eq("source_column" => "email")
   end
 
   it "rolls back bulk creation when a later source does not exist" do
-    rows = [create_rows.first, create_rows.last.merge(input_json: { name: "missing_source" })]
+    rows = [create_rows.first, create_rows.last.merge(input_json: { source_column: "missing_source" })]
 
     expect do
       post "/transformations/bulk", params: { transformations: rows }, as: :json
@@ -95,7 +95,7 @@ RSpec.describe "Transformations", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body).to eq([{
       "id" => transformation.id, "transform_map_id" => mapping.id, "output_column_id" => column.id,
-      "column_transformer_id" => catalog.id, "input_json" => { "name" => "email" },
+      "column_transformer_id" => catalog.id, "input_json" => { "source_column" => "email" },
     }])
   end
 
@@ -105,18 +105,18 @@ RSpec.describe "Transformations", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body).to eq(
       "id" => transformation.id, "transform_map_id" => mapping.id, "output_column_id" => column.id,
-      "column_transformer_id" => catalog.id, "input_json" => { "name" => "email" },
+      "column_transformer_id" => catalog.id, "input_json" => { "source_column" => "email" },
     )
   end
 
   it "updates permitted configuration fields without changing the record ID" do
     patch "/transformations/#{transformation.id}", params: { transformation: {
-      output_column_id: other_column.id, input_json: { "name" => "customer_id" }, id: -1,
+      output_column_id: other_column.id, input_json: { "source_column" => "customer_id" }, id: -1,
     } }, as: :json
 
     expect(response).to have_http_status(:ok)
     expect(transformation.reload.output_column_id).to eq(other_column.id)
-    expect(transformation.input_json).to eq("name" => "customer_id")
+    expect(transformation.input_json).to eq("source_column" => "customer_id")
     expect(response.parsed_body.fetch("id")).to eq(transformation.id)
   end
 
@@ -124,7 +124,7 @@ RSpec.describe "Transformations", type: :request do
     patch "/transformations/#{transformation.id}", params: { transformation: { input_json: nil } }, as: :json
 
     expect(response).to have_http_status(422)
-    expect(transformation.reload.input_json).to eq("name" => "email")
+    expect(transformation.reload.input_json).to eq("source_column" => "email")
   end
 
   it "rejects an output column that belongs to another file type" do
@@ -181,7 +181,7 @@ RSpec.describe "Transformations", type: :request do
 
     expect(response).to have_http_status(422)
     expect(response.parsed_body.fetch("errors").first.fetch("index")).to eq(1)
-    expect(first.reload.input_json).to eq("name" => "email")
-    expect(second.reload.input_json).to eq("name" => "customer_id")
+    expect(first.reload.input_json).to eq("source_column" => "email")
+    expect(second.reload.input_json).to eq("source_column" => "customer_id")
   end
 end

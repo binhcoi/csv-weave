@@ -218,7 +218,7 @@ For example, `POST /transform_maps` can copy `email` from source type `10` into 
       {
         "output_column_id": 201,
         "column_transformer_id": 1,
-        "input_json": { "name": "email" }
+        "input_json": { "source_column": "email" }
       }
     ]
   }
@@ -254,7 +254,9 @@ A transformation belongs to one map, selects an operation, and targets one outpu
 | `column_transformer_id` | Integer | Required on create; an ID from `/column_transformers`. |
 | `input_json` | JSON value | Optional in the general request shape; the operation's schema determines required settings. Defaults to `{}` on create. |
 
-All four fields can be supplied on update. For copy, `input_json` must be an object containing a nonempty string `name`. That name must identify a column in the map's input file type.
+All four fields can be supplied on update. Copy, integer parse, and decimal parse require `input_json` to contain a nonempty string `source_column` identifying a column in the map's input file type. No additional settings are accepted.
+
+Integer parsing uses base 10 and rejects fractional or partially numeric text. Decimal parsing preserves precision with `BigDecimal`, accepts exponent notation, and rejects non-finite values. Both numeric operations write null without an error for blank or missing CSV values, leaving required-value checks to output validation. Invalid numeric values clear the output field and return a transformation error message. CSV conversion execution remains planned.
 
 Example body for `POST /transformations`:
 
@@ -264,7 +266,7 @@ Example body for `POST /transformations`:
     "transform_map_id": 30,
     "output_column_id": 201,
     "column_transformer_id": 1,
-    "input_json": { "name": "email" }
+    "input_json": { "source_column": "email" }
   }
 }
 ```
@@ -275,8 +277,8 @@ Returned fields are `id`, `transform_map_id`, `output_column_id`, `column_transf
 
 | Method | Path | Contents |
 | --- | --- | --- |
-| `GET` | `/column_validators` | Available validator types, currently `RequiredValidator`. |
-| `GET` | `/column_transformers` | Available transformer types, currently `CopyTransformer`. |
+| `GET` | `/column_validators` | `RequiredValidator`, `LengthValidator`, and `RegexValidator`. |
+| `GET` | `/column_transformers` | `CopyTransformer`, `IntegerParseTransformer`, and `DecimalParseTransformer`. |
 
 Both return arrays in ID order. Each entry contains:
 
@@ -310,7 +312,7 @@ These requests use top-level `add` and `remove_ids`, without a singular resource
     {
       "output_column_id": 201,
       "column_transformer_id": 1,
-      "input_json": { "name": "email" }
+      "input_json": { "source_column": "email" }
     }
   ]
 }

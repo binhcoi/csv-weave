@@ -5,8 +5,10 @@ FactoryBot.define do
     input_schema do
       {
         "type" => "object",
-        "properties" => { "name" => { "type" => "string", "minLength" => 1 } },
-        "required" => ["name"],
+        "properties" => {
+          "source_column" => { "type" => "string", "minLength" => 1 },
+        },
+        "required" => ["source_column"],
         "additionalProperties" => false,
       }
     end
