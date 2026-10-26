@@ -1,33 +1,53 @@
 # Input schemas
 
-`ColumnValidator.input_schema` and `ColumnTransformer.input_schema` describe the
-parameters accepted by a processor. They use standard JSON Schema, validated by
-the `json_schemer` gem. Schemas are maintained in `db/seeds.rb`.
+Catalog entries store an `input_schema` describing the JSON settings accepted by
+a processor. A rule stores those settings in `input_json`. Schemas use JSON
+Schema through `json_schemer` and are maintained in [db/seeds.rb](../db/seeds.rb).
 
-A `nil` schema skips JSON Schema validation. `RequiredValidator` uses this because
-it needs no parameters. Its `Validation` can omit `input_json` or supply `nil`.
-Omitted parameters still default to `{}` in the database.
+See [validators](validator.md) and [transformers](transformer.md) for each
+operation's settings and behavior. The [API reference](api.md) describes how to
+submit rules and retrieve catalog schemas.
 
-`CopyTransformer` requires a source column name:
+## Defaults and null values
+
+| Value | Meaning |
+| --- | --- |
+| Omitted `input_json` on create | Defaults to `{}`. The rule must still satisfy its schema and configuration checks. |
+| Explicit `input_json: null` | Preserved if allowed by the selected schema and processor configuration checks. |
+| Catalog `input_schema: null` | Skips JSON Schema validation. Processor configuration checks still run. |
+| Catalog `input_schema: {}` | Accepts any JSON value, including null; processor configuration checks still run. |
+
+`RequiredValidator` has a null schema and reads no settings. Parameterized
+processors currently require objects, so they reject null, arrays, and scalar
+settings. Omitted settings can also fail when an operation requires parameters.
+
+## Schema checks and configuration checks
+
+For example, the single-source transformers use this schema:
 
 ```json
 {
   "type": "object",
   "properties": {
-    "name": { "type": "string", "minLength": 1 }
+    "source_column": { "type": "string", "minLength": 1 }
   },
-  "required": ["name"],
+  "required": ["source_column"],
   "additionalProperties": false
 }
 ```
 
-This accepts `{"name": "email"}`. It rejects missing, empty, or non-string names,
-unexpected properties, and non-object parameters.
+It accepts `{"source_column": "email"}` and rejects missing, empty, or non-string
+source names and unexpected properties. The processor separately checks that
+`email` exists in the map's input file type.
 
-When a schema is present, `Validation` and `Transformation` validate `input_json`
-before saving. Failures appear in `errors[:input_json]`, including the affected
-field. Invalid schema documents appear in the catalog's `errors[:input_schema]`.
-These checks are implemented in `app/validators`.
+Before saving a `Validation` or `Transformation`, the model checks `input_json`
+against its catalog schema. If the record has no errors, the processor's
+`validate_configuration` hook checks constraints such as bound ordering, regex
+syntax, or source-column existence. These checks validate configuration; they
+do not process CSV values.
 
-An explicit empty schema `{}` accepts any JSON value. Use `nil` when a processor
-does not need a schema.
+Schema and processor configuration failures appear in `errors[:input_json]`.
+Invalid schema documents are rejected on the catalog's `input_schema` field.
+If an invalid catalog schema reaches a rule, the rule reports an `input_json`
+error instead of processing it. API error response shapes are documented in
+[API errors](api.md#errors).

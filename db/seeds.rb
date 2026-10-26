@@ -38,6 +38,18 @@ validators = [
       additionalProperties: false,
     },
   },
+  {
+    processor_class: "NumericRangeValidator",
+    description: "Validate a column value is within an inclusive numeric range",
+    input_schema: {
+      type: "object",
+      properties: {
+        min: { type: "number" },
+        max: { type: "number" },
+      },
+      additionalProperties: false,
+    },
+  },
 ]
 
 source_column_schema = {

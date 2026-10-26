@@ -48,7 +48,8 @@ RSpec.describe ColumnValidator, type: :model do
   describe "#get_validator" do
     let(:validation) { Validation.new(column: Column.new(name: "email", position: 0), input_json: nil) }
 
-    [Validators::RequiredValidator, Validators::LengthValidator, Validators::RegexValidator].each do |processor_class|
+    [Validators::RequiredValidator, Validators::LengthValidator,
+     Validators::RegexValidator, Validators::NumericRangeValidator].each do |processor_class|
       it "resolves #{processor_class.name} and passes the validation to the processor" do
         validator.processor_class = processor_class.name.demodulize
         validator.save!

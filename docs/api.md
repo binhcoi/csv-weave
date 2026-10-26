@@ -180,7 +180,7 @@ For example, attach a required-value check with `POST /validations`:
 }
 ```
 
-Returned fields are `id`, `column_id`, `column_validator_id`, and `input_json`. `RequiredValidator` needs no settings. Other validators will define their own settings through their catalog schemas.
+Returned fields are `id`, `column_id`, `column_validator_id`, and `input_json`. See the [validator guide](validator.md) for operation settings and behavior.
 
 ## Transformation maps
 
@@ -254,9 +254,7 @@ A transformation belongs to one map, selects an operation, and targets one outpu
 | `column_transformer_id` | Integer | Required on create; an ID from `/column_transformers`. |
 | `input_json` | JSON value | Optional in the general request shape; the operation's schema determines required settings. Defaults to `{}` on create. |
 
-All four fields can be supplied on update. Copy, integer parse, and decimal parse require `input_json` to contain a nonempty string `source_column` identifying a column in the map's input file type. No additional settings are accepted.
-
-Integer parsing uses base 10 and rejects fractional or partially numeric text. Decimal parsing preserves precision with `BigDecimal`, accepts exponent notation, and rejects non-finite values. Both numeric operations write null without an error for blank or missing CSV values, leaving required-value checks to output validation. Invalid numeric values clear the output field and return a transformation error message. CSV conversion execution remains planned.
+All four fields can be supplied on update. See the [transformer guide](transformer.md) for operation settings and behavior.
 
 Example body for `POST /transformations`:
 
@@ -277,8 +275,8 @@ Returned fields are `id`, `transform_map_id`, `output_column_id`, `column_transf
 
 | Method | Path | Contents |
 | --- | --- | --- |
-| `GET` | `/column_validators` | `RequiredValidator`, `LengthValidator`, and `RegexValidator`. |
-| `GET` | `/column_transformers` | `CopyTransformer`, `IntegerParseTransformer`, and `DecimalParseTransformer`. |
+| `GET` | `/column_validators` | Validator catalog entries. |
+| `GET` | `/column_transformers` | Transformer catalog entries. |
 
 Both return arrays in ID order. Each entry contains:
 
