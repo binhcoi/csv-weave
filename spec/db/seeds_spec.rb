@@ -5,20 +5,26 @@ RSpec.describe "Catalog seeds", type: :model do
     validator = FactoryBot.create(:column_validator, input_schema: { "type" => "object" })
     length_validator = FactoryBot.create(:column_validator, processor_class: "LengthValidator",
                                         input_schema: { "type" => "object" })
+    regex_validator = FactoryBot.create(:column_validator, processor_class: "RegexValidator",
+                                       input_schema: { "type" => "object" })
     transformer = FactoryBot.create(:column_transformer, input_schema: { "type" => "object" })
 
     Rails.application.load_seed
     length_schema = length_validator.reload.input_schema
+    regex_schema = regex_validator.reload.input_schema
     length_validator.update!(description: "Outdated description", input_schema: nil)
+    regex_validator.update!(description: "Outdated description", input_schema: nil)
     Rails.application.load_seed
 
-    expect(ColumnValidator.pluck(:id)).to contain_exactly(validator.id, length_validator.id)
+    expect(ColumnValidator.pluck(:id)).to contain_exactly(validator.id, length_validator.id, regex_validator.id)
     expect(ColumnTransformer.pluck(:id)).to eq([transformer.id])
     expect(validator.reload.description).to eq("Validate a column has a nonblank value")
     expect(length_validator.reload.description).to eq("Validate a column length is within range")
+    expect(regex_validator.reload.description).to eq("Validate a column value against a regular expression")
     expect(transformer.reload.description).to eq("Copy the value of an input column to an output column")
     expect(validator.input_schema).to be_nil
     expect(length_validator.input_schema).to eq(length_schema)
+    expect(regex_validator.input_schema).to eq(regex_schema)
     expect(transformer.input_schema).to eq(
       "type" => "object",
       "properties" => { "name" => { "type" => "string", "minLength" => 1 } },

@@ -26,6 +26,18 @@ validators = [
       additionalProperties: false,
     },
   },
+  {
+    processor_class: "RegexValidator",
+    description: "Validate a column value against a regular expression",
+    input_schema: {
+      type: "object",
+      properties: {
+        pattern: { type: "string" },
+      },
+      required: ["pattern"],
+      additionalProperties: false,
+    },
+  },
 ]
 
 transformers = [
