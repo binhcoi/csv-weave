@@ -28,6 +28,8 @@ RSpec.describe "Catalog seeds", type: :model do
                                              input_schema: { "type" => "object" })
     truncate_transformer = FactoryBot.create(:column_transformer, processor_class: "TruncateTransformer",
                                             input_schema: { "type" => "object" })
+    date_transformer = FactoryBot.create(:column_transformer, processor_class: "DateParseTransformer",
+                                        input_schema: { "type" => "object" })
 
     Rails.application.load_seed
     length_schema = length_validator.reload.input_schema
@@ -41,6 +43,7 @@ RSpec.describe "Catalog seeds", type: :model do
     concatenate_transformer.update!(description: "Outdated description", input_schema: nil)
     substring_transformer.update!(description: "Outdated description", input_schema: nil)
     truncate_transformer.update!(description: "Outdated description", input_schema: nil)
+    date_transformer.update!(description: "Outdated description", input_schema: nil)
     Rails.application.load_seed
 
     expect(ColumnValidator.pluck(:id)).to contain_exactly(validator.id, length_validator.id, regex_validator.id,
@@ -48,7 +51,8 @@ RSpec.describe "Catalog seeds", type: :model do
                                                        string_comparison.id, numeric_comparison.id)
     expect(ColumnTransformer.pluck(:id)).to contain_exactly(transformer.id, integer_transformer.id,
                                                          decimal_transformer.id, concatenate_transformer.id,
-                                                         substring_transformer.id, truncate_transformer.id)
+                                                         substring_transformer.id, truncate_transformer.id,
+                                                         date_transformer.id)
     expect(validator.reload.description).to eq("Validate a column has a nonblank value")
     expect(length_validator.reload.description).to eq("Validate a column length is within range")
     expect(regex_validator.reload.description).to eq("Validate a column value against a regular expression")
@@ -65,6 +69,8 @@ RSpec.describe "Catalog seeds", type: :model do
       .to eq("Extract characters from an input column using a zero-based start and length")
     expect(truncate_transformer.reload.description)
       .to eq("Keep up to the configured number of characters from the start of an input column")
+    expect(date_transformer.reload.description)
+      .to eq("Parse an input column using a date format and write a formatted date string")
     expect(validator.input_schema).to be_nil
     expect(length_validator.input_schema).to eq(length_schema)
     expect(regex_validator.input_schema).to eq(regex_schema)
@@ -133,6 +139,16 @@ RSpec.describe "Catalog seeds", type: :model do
         "length" => { "type" => "integer", "minimum" => 0 },
       },
       "required" => ["source_column", "length"],
+      "additionalProperties" => false,
+    )
+    expect(date_transformer.input_schema).to eq(
+      "type" => "object",
+      "properties" => {
+        "source_column" => { "type" => "string", "minLength" => 1 },
+        "format" => { "type" => "string", "minLength" => 1 },
+        "output_format" => { "type" => "string", "minLength" => 1 },
+      },
+      "required" => ["source_column", "format"],
       "additionalProperties" => false,
     )
   end

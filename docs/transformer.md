@@ -125,3 +125,34 @@ matching substring. Whitespace, punctuation, and newlines count toward the
 limit and are preserved. Missing CSV headers and null values write `nil`
 without an error; empty strings remain `""`. Output validators determine
 whether a blank result is acceptable.
+
+## DateParseTransformer
+
+```json
+{
+  "source_column": "joined_on",
+  "format": "%d/%m/%Y",
+  "output_format": "%m/%d/%Y"
+}
+```
+
+Parses a date using the required Ruby `strptime` input `format` and writes text
+using the optional Ruby `strftime` `output_format`. With these settings,
+`"29/02/2024"` becomes `"02/29/2024"`. Omitting `output_format` defaults to
+`%Y-%m-%d` (ISO `YYYY-MM-DD`). An explicit output format must be a nonempty
+string; partial formats such as `%Y-%m` and literal punctuation are allowed.
+The source uses the same lookup and deletion protection as the other
+single-source transformers. Additional settings are rejected.
+
+The format must describe a complete calendar, ordinal, or ISO week date, using
+the same strict parser as `DateValidator`. Examples include `%Y-%m-%d`,
+`%d/%m/%Y`, `%d %b %Y`, `%Y-%j`, and `%G-W%V-%u`. Values must be real Gregorian
+dates and match the format exactly, including padding and month-name case.
+Surrounding whitespace and extra text fail unless part of the format.
+Incomplete formats are rejected when saving the rule.
+
+Missing CSV headers, null, empty, and whitespace-only fields write `nil`
+without an error. Other invalid values clear the target and return an error
+such as `source column "joined_on" contains an invalid date`. Output required
+validation can reject blank results. For complete date output, configure an
+output date validator with the same format as `output_format`.

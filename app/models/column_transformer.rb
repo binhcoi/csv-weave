@@ -6,6 +6,7 @@ class ColumnTransformer < ApplicationRecord
     "ConcatenateTransformer",
     "SubstringTransformer",
     "TruncateTransformer",
+    "DateParseTransformer",
   ].freeze
 
   validates :processor_class, presence: true, inclusion: { in: PROCESSOR_CLASSES }, uniqueness: true

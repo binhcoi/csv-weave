@@ -32,8 +32,7 @@ module Validators
     end
 
     def validate_configuration
-      sample = Date.new(2000, 2, 29, Date::GREGORIAN).strftime(format)
-      unless parse_date(sample, format)
+      unless StrictDateParser.valid_format?(format)
         @validation.errors.add(:input_json, "format must describe a complete date")
       end
 
@@ -50,21 +49,7 @@ module Validators
     private
 
     def parse_date(data, date_format)
-      return unless data.is_a?(String)
-
-      parts = Date._strptime(data, date_format)
-      return unless parts && complete_date?(parts)
-
-      value = Date.strptime(data, date_format, Date::GREGORIAN)
-      value if value.strftime(date_format) == data
-    rescue Date::Error
-      nil
-    end
-
-    def complete_date?(parts)
-      (parts[:year] && parts[:mon] && parts[:mday]) ||
-        (parts[:year] && parts[:yday]) ||
-        (parts[:cwyear] && parts[:cweek] && parts[:cwday])
+      StrictDateParser.parse(data, date_format)
     end
   end
 end

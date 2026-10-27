@@ -151,6 +151,20 @@ transformers = [
       additionalProperties: false,
     },
   },
+  {
+    processor_class: "DateParseTransformer",
+    description: "Parse an input column using a date format and write a formatted date string",
+    input_schema: {
+      type: "object",
+      properties: {
+        source_column: { type: "string", minLength: 1 },
+        format: { type: "string", minLength: 1 },
+        output_format: { type: "string", minLength: 1 },
+      },
+      required: ["source_column", "format"],
+      additionalProperties: false,
+    },
+  },
 ]
 
 ColumnValidator.transaction do
