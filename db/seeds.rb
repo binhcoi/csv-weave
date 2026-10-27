@@ -178,6 +178,23 @@ transformers = [
       additionalProperties: false,
     },
   },
+  {
+    processor_class: "ArithmeticTransformer",
+    description: "Calculate with two finite numeric input columns using an arithmetic operator",
+    input_schema: {
+      type: "object",
+      properties: {
+        source_columns: { type: "array", minItems: 2, maxItems: 2, items: { type: "string", minLength: 1 } },
+        operator: { type: "string", enum: ["+", "-", "*", "/"] },
+        scale: { type: "integer", minimum: 0, maximum: 100 },
+      },
+      required: ["source_columns", "operator"],
+      if: { properties: { operator: { const: "/" } } },
+      then: { required: ["scale"] },
+      else: { not: { required: ["scale"] } },
+      additionalProperties: false,
+    },
+  },
 ]
 
 ColumnValidator.transaction do

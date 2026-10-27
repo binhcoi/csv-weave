@@ -190,3 +190,47 @@ skipping is applied. Output validators determine whether the result is accepted.
 Every listed source must exist, even when unused by the template, and all are
 protected by the source-deletion guard. Runtime missing-source or template
 errors clear the target and return an error message.
+
+## ArithmeticTransformer
+
+```json
+{
+  "source_columns": ["subtotal", "tax"],
+  "operator": "+"
+}
+```
+
+Takes exactly two ordered source names and one operator: `+`, `-`, `*`, or `/`.
+The first source is the left operand and the second is the right operand.
+Repeated names are allowed, such as multiplying a column by itself. Both sources
+must exist in the map's input file type and are protected from deletion.
+Additional settings are rejected.
+
+Values parse as finite `BigDecimal` numbers, accepting signs, surrounding
+whitespace, and exponent notation. Missing CSV headers, null, empty, and
+whitespace-only values count as zero, matching numeric comparison. Malformed
+numbers, `NaN`, and infinities fail. Source values are preserved.
+
+Addition, subtraction, and multiplication produce exact `BigDecimal` results
+without an implicit rounding step; `0.1 + 0.2` produces `0.3`.
+
+Division additionally requires `scale`, an integer from 0 to 100:
+
+```json
+{
+  "source_columns": ["total", "quantity"],
+  "operator": "/",
+  "scale": 2
+}
+```
+
+Division rounds an exact ratio to that many decimal places using half-up
+rounding. For example, `1 / 3` at scale 2 produces `0.33`, `1 / 8` produces
+`0.13`, and `-1 / 8` produces `-0.13`. Scale zero rounds to a whole number.
+`scale` is rejected for other operators.
+
+Results are numeric `BigDecimal` values, not formatted strings. Scale controls
+rounding rather than fixed-width CSV output or trailing zeroes. Output numeric
+validators determine acceptance. Invalid operands, division by zero (including
+a blank divisor), missing configured sources, and non-finite results clear the
+target and return an error message; other destination fields are preserved.

@@ -4,7 +4,7 @@
 
 CSVWeave brings file formats, validation rules, and field transformations into reusable definitions. Describe the data you receive, describe the data you need, and save a map between them. The project is designed to turn those definitions into repeatable conversions with an output CSV and a structured error report.
 
-**Work in progress:** Format and mapping configuration, column validators, and copy, integer parse, decimal parse, concatenate, substring, truncate, date parse, and format-string transformers are implemented. Arithmetic transformers and CSV conversion execution are planned.
+**Work in progress:** Format and mapping configuration, column validators, and copy, integer parse, decimal parse, concatenate, substring, truncate, date parse, format-string, and arithmetic transformers are implemented. CSV conversion execution is planned.
 
 ## The workflow
 
@@ -74,12 +74,11 @@ The [API reference](docs/api.md) covers endpoints and request/response contracts
 | Area | Status |
 | --- | --- |
 | File formats, column rules, reusable maps, and operation catalogs | Implemented, including nested creation and atomic bulk editing. |
-| Required-value, length, regex, numeric range, date, and same-row comparison validators; copy, numeric parsing, concatenate, substring, truncate, date parse, and format-string transformers | Implemented with configuration and row-behavior coverage. |
-| Same-row arithmetic transformer | Planned. |
+| Required-value, length, regex, numeric range, date, and same-row comparison validators; copy, numeric parsing, concatenate, substring, truncate, date parse, format-string, and arithmetic transformers | Implemented with configuration and row-behavior coverage. |
 | Streaming conversion, ordered output, and structured error reports | Planned. |
 | All-or-nothing and valid-rows-only processing | Planned. |
 
-The configuration foundation is complete. Current work is extending the operation library before building the conversion pipeline.
+The configuration foundation and planned operation library are implemented. Representative pipeline coverage remains before building the conversion engine.
 
 ## Run locally
 

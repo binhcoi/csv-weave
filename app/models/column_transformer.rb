@@ -8,6 +8,7 @@ class ColumnTransformer < ApplicationRecord
     "TruncateTransformer",
     "DateParseTransformer",
     "FormatStringTransformer",
+    "ArithmeticTransformer",
   ].freeze
 
   validates :processor_class, presence: true, inclusion: { in: PROCESSOR_CLASSES }, uniqueness: true
