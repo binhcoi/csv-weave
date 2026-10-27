@@ -124,6 +124,33 @@ transformers = [
       additionalProperties: false,
     },
   },
+  {
+    processor_class: "SubstringTransformer",
+    description: "Extract characters from an input column using a zero-based start and length",
+    input_schema: {
+      type: "object",
+      properties: {
+        source_column: { type: "string", minLength: 1 },
+        start: { type: "integer", minimum: 0 },
+        length: { type: "integer", minimum: 0 },
+      },
+      required: ["source_column", "start", "length"],
+      additionalProperties: false,
+    },
+  },
+  {
+    processor_class: "TruncateTransformer",
+    description: "Keep up to the configured number of characters from the start of an input column",
+    input_schema: {
+      type: "object",
+      properties: {
+        source_column: { type: "string", minLength: 1 },
+        length: { type: "integer", minimum: 0 },
+      },
+      required: ["source_column", "length"],
+      additionalProperties: false,
+    },
+  },
 ]
 
 ColumnValidator.transaction do

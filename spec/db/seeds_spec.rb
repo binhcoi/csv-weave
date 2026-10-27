@@ -24,6 +24,10 @@ RSpec.describe "Catalog seeds", type: :model do
     numeric_transformers = [integer_transformer, decimal_transformer]
     concatenate_transformer = FactoryBot.create(:column_transformer, processor_class: "ConcatenateTransformer",
                                                input_schema: { "type" => "object" })
+    substring_transformer = FactoryBot.create(:column_transformer, processor_class: "SubstringTransformer",
+                                             input_schema: { "type" => "object" })
+    truncate_transformer = FactoryBot.create(:column_transformer, processor_class: "TruncateTransformer",
+                                            input_schema: { "type" => "object" })
 
     Rails.application.load_seed
     length_schema = length_validator.reload.input_schema
@@ -35,13 +39,16 @@ RSpec.describe "Catalog seeds", type: :model do
     comparison_validators.each { |catalog| catalog.update!(description: "Outdated description", input_schema: nil) }
     numeric_transformers.each { |catalog| catalog.update!(description: "Outdated description", input_schema: nil) }
     concatenate_transformer.update!(description: "Outdated description", input_schema: nil)
+    substring_transformer.update!(description: "Outdated description", input_schema: nil)
+    truncate_transformer.update!(description: "Outdated description", input_schema: nil)
     Rails.application.load_seed
 
     expect(ColumnValidator.pluck(:id)).to contain_exactly(validator.id, length_validator.id, regex_validator.id,
                                                        numeric_validator.id, date_validator.id,
                                                        string_comparison.id, numeric_comparison.id)
     expect(ColumnTransformer.pluck(:id)).to contain_exactly(transformer.id, integer_transformer.id,
-                                                         decimal_transformer.id, concatenate_transformer.id)
+                                                         decimal_transformer.id, concatenate_transformer.id,
+                                                         substring_transformer.id, truncate_transformer.id)
     expect(validator.reload.description).to eq("Validate a column has a nonblank value")
     expect(length_validator.reload.description).to eq("Validate a column length is within range")
     expect(regex_validator.reload.description).to eq("Validate a column value against a regular expression")
@@ -54,6 +61,10 @@ RSpec.describe "Catalog seeds", type: :model do
     expect(decimal_transformer.reload.description).to eq("Parse an input column as a finite decimal without losing precision")
     expect(concatenate_transformer.reload.description)
       .to eq("Join nonblank input column values in the configured order with an optional separator")
+    expect(substring_transformer.reload.description)
+      .to eq("Extract characters from an input column using a zero-based start and length")
+    expect(truncate_transformer.reload.description)
+      .to eq("Keep up to the configured number of characters from the start of an input column")
     expect(validator.input_schema).to be_nil
     expect(length_validator.input_schema).to eq(length_schema)
     expect(regex_validator.input_schema).to eq(regex_schema)
@@ -103,6 +114,25 @@ RSpec.describe "Catalog seeds", type: :model do
         "separator" => { "type" => "string" },
       },
       "required" => ["source_columns"],
+      "additionalProperties" => false,
+    )
+    expect(substring_transformer.input_schema).to eq(
+      "type" => "object",
+      "properties" => {
+        "source_column" => { "type" => "string", "minLength" => 1 },
+        "start" => { "type" => "integer", "minimum" => 0 },
+        "length" => { "type" => "integer", "minimum" => 0 },
+      },
+      "required" => ["source_column", "start", "length"],
+      "additionalProperties" => false,
+    )
+    expect(truncate_transformer.input_schema).to eq(
+      "type" => "object",
+      "properties" => {
+        "source_column" => { "type" => "string", "minLength" => 1 },
+        "length" => { "type" => "integer", "minimum" => 0 },
+      },
+      "required" => ["source_column", "length"],
       "additionalProperties" => false,
     )
   end

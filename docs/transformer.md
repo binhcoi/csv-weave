@@ -81,3 +81,47 @@ error; output validators decide whether that is acceptable.
 Every configured source must exist. A missing configured source prevents saving
 the rule; at runtime it clears the target and returns an error. All source names
 are reported to the existing column-deletion guard.
+
+## SubstringTransformer
+
+```json
+{
+  "source_column": "product_code",
+  "start": 2,
+  "length": 4
+}
+```
+
+Extracts up to `length` characters starting at the zero-based `start` position;
+`"AB1234XY"` with these settings becomes `"1234"`. Both settings are required
+nonnegative integers. Negative offsets and additional settings are rejected.
+The source uses the same lookup and deletion protection as the other
+single-source transformers.
+
+Positions count Ruby string characters, not bytes or visual grapheme clusters.
+Whitespace, punctuation, and newlines are preserved. A length extending past
+the end returns the remaining text. A zero length or start at or beyond the end
+returns `""`. Missing CSV headers and null values write `nil` without an error;
+empty strings remain `""`. Output validators determine whether a blank result
+is acceptable.
+
+## TruncateTransformer
+
+```json
+{
+  "source_column": "description",
+  "length": 20
+}
+```
+
+Keeps up to `length` characters from the start of the source value, with no
+ellipsis or other suffix. `length` is a required nonnegative integer; zero
+produces `""` for any non-null value. Values at or below the limit are unchanged.
+Additional settings are rejected. The source uses the same lookup and deletion
+protection as the other single-source transformers.
+
+Length counts Ruby string characters, not bytes or visual grapheme clusters,
+matching substring. Whitespace, punctuation, and newlines count toward the
+limit and are preserved. Missing CSV headers and null values write `nil`
+without an error; empty strings remain `""`. Output validators determine
+whether a blank result is acceptable.

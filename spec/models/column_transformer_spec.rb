@@ -49,7 +49,8 @@ RSpec.describe ColumnTransformer, type: :model do
     let(:transformation) { Transformation.new(input_json: { "source_column" => "source_email" }) }
 
     [Transformers::CopyTransformer, Transformers::IntegerParseTransformer,
-     Transformers::DecimalParseTransformer, Transformers::ConcatenateTransformer].each do |processor_class|
+     Transformers::DecimalParseTransformer, Transformers::ConcatenateTransformer,
+     Transformers::SubstringTransformer, Transformers::TruncateTransformer].each do |processor_class|
       it "resolves #{processor_class.name} and passes the transformation to the processor" do
         transformer.processor_class = processor_class.name.demodulize
         transformer.save!

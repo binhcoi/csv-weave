@@ -23,7 +23,7 @@ settings. Omitted settings can also fail when an operation requires parameters.
 
 ## Schema checks and configuration checks
 
-For example, the single-source transformers use this schema:
+For example, copy, integer parse, and decimal parse use this schema:
 
 ```json
 {

@@ -4,6 +4,8 @@ class ColumnTransformer < ApplicationRecord
     "IntegerParseTransformer",
     "DecimalParseTransformer",
     "ConcatenateTransformer",
+    "SubstringTransformer",
+    "TruncateTransformer",
   ].freeze
 
   validates :processor_class, presence: true, inclusion: { in: PROCESSOR_CLASSES }, uniqueness: true
