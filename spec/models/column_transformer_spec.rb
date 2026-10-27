@@ -51,7 +51,7 @@ RSpec.describe ColumnTransformer, type: :model do
     [Transformers::CopyTransformer, Transformers::IntegerParseTransformer,
      Transformers::DecimalParseTransformer, Transformers::ConcatenateTransformer,
      Transformers::SubstringTransformer, Transformers::TruncateTransformer,
-     Transformers::DateParseTransformer].each do |processor_class|
+     Transformers::DateParseTransformer, Transformers::FormatStringTransformer].each do |processor_class|
       it "resolves #{processor_class.name} and passes the transformation to the processor" do
         transformer.processor_class = processor_class.name.demodulize
         transformer.save!

@@ -156,3 +156,37 @@ without an error. Other invalid values clear the target and return an error
 such as `source column "joined_on" contains an invalid date`. Output required
 validation can reject blank results. For complete date output, configure an
 output date validator with the same format as `output_format`.
+
+## FormatStringTransformer
+
+```json
+{
+  "source_columns": ["given_name", "family_name"],
+  "format": "%{family_name}, %{given_name}"
+}
+```
+
+Substitutes named source values into a string template. For `given_name = "Alex"`
+and `family_name = "Morgan"`, these settings produce `"Morgan, Alex"`.
+
+`source_columns` is a required, nonempty array of nonempty column-name strings
+from the map's input file type. `format` is a required string, including `""`.
+Repeated sources and placeholders are allowed; listed sources may be unused.
+Additional settings are rejected.
+
+Use `%{column_name}` to substitute a listed source and `%%` for a literal percent.
+Names match exactly, including spaces and Unicode; placeholder names cannot
+contain braces. For example, `%%{given_name}` produces the literal
+`%{given_name}`, while `%%%{given_name}` produces `%Alex`. Other directives such
+as `%s`, `%d`, and `%<name>s`, malformed placeholders, and placeholders naming
+unlisted sources are rejected when saving the rule. Templates and substituted
+values are treated as text; inserted values are never interpreted again.
+
+Missing CSV headers and null values become `""`; empty strings stay empty.
+Whitespace and template punctuation are preserved, so a missing family name
+with the example template produces `", Alex"`. No separator cleanup or blank
+skipping is applied. Output validators determine whether the result is accepted.
+
+Every listed source must exist, even when unused by the template, and all are
+protected by the source-deletion guard. Runtime missing-source or template
+errors clear the target and return an error message.

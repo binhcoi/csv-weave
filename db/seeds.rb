@@ -165,6 +165,19 @@ transformers = [
       additionalProperties: false,
     },
   },
+  {
+    processor_class: "FormatStringTransformer",
+    description: "Substitute input column values into a string template with named placeholders",
+    input_schema: {
+      type: "object",
+      properties: {
+        source_columns: { type: "array", minItems: 1, items: { type: "string", minLength: 1 } },
+        format: { type: "string" },
+      },
+      required: ["source_columns", "format"],
+      additionalProperties: false,
+    },
+  },
 ]
 
 ColumnValidator.transaction do
