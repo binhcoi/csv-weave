@@ -1,14 +1,14 @@
 # Validators
 
-A `Validation` attaches a catalog operation to a column. A processor's
-`validate(row)` reads the configured columns by header from a `CSV::Row` and
-returns `true` or `false` without changing the row. Rules can belong to input or
-output columns.
-The conversion API that coordinates these calls is still planned.
+A validation rule selects a catalog operation and checks a column's value
+without changing it. Rules can belong to input or output columns. Some
+operations also compare another value in the same row. CSV conversion
+execution is planned.
 
-The examples below are `input_json` settings. See [input schemas](input_schemas.md)
-for configuration validation and the [API reference](api.md#validation-rules)
-for creating rules.
+Every JSON example below is an **`input_json` settings object**, placed inside
+a validation request. See [rule configuration schemas](input_schemas.md) for
+settings validation and the [API reference](api.md#validation-rules) for a
+complete request. Validators with settings reject unrecognized setting names.
 
 ## RequiredValidator
 
@@ -24,7 +24,7 @@ Rejects missing, null, empty, and whitespace-only fields. Zero is nonblank.
 ```
 
 Bounds are inclusive nonnegative integers. At least one is required; when both
-are present, `min <= max`. Additional settings are rejected.
+are present, `min <= max`.
 
 Counts characters, including whitespace, rather than bytes. Missing, null, and
 empty fields have length zero. It checks text length; numeric outputs should
@@ -37,7 +37,7 @@ use numeric validation.
 ```
 
 Requires a Ruby regex pattern string; an empty pattern is allowed. Invalid
-syntax is rejected when saving the rule. Additional settings are rejected.
+syntax is rejected when saving the rule.
 
 Patterns can match substrings. Use `\A` and `\z` for the whole value, escaping
 backslashes as shown when writing JSON. Nonblank values are matched without
@@ -54,8 +54,8 @@ override the limit.
 ```
 
 Bounds are inclusive JSON numbers. At least one is required; when both are
-present, `min <= max`. Negative and fractional bounds are allowed. Strings,
-null bounds, and additional settings are rejected.
+present, `min <= max`. Negative and fractional bounds are allowed. String and
+null bounds are rejected.
 
 Nonblank values must parse as finite decimals within the range. Parsing uses
 `BigDecimal` and accepts signs, surrounding whitespace, and exponent notation.
@@ -82,7 +82,7 @@ format. A parsed date must format back to the original value.
 
 Optional `min` and `max` are inclusive dates in `YYYY-MM-DD`, regardless of the
 value's format. Either, both, or neither may be supplied; when both are present,
-`min <= max`. Invalid bounds and additional settings are rejected.
+`min <= max`. Invalid bounds are rejected.
 
 Missing, null, empty, and whitespace-only fields pass; add a required rule to
 reject them. The row value is never changed or reformatted.
@@ -98,7 +98,7 @@ column on the left with `other_column` on the right. Both use these settings:
 
 Both keys are required. `other_column` must be a nonempty string naming a column
 in the same file type. Define both columns before attaching the rule. Operators
-are `==`, `!=`, `<`, `<=`, `>`, and `>=`; additional settings are rejected.
+are `==`, `!=`, `<`, `<=`, `>`, and `>=`.
 
 ### StringComparisonValidator
 

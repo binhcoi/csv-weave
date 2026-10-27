@@ -1,8 +1,9 @@
-# Input schemas
+# Rule configuration schemas
 
-Catalog entries store an `input_schema` describing the JSON settings accepted by
-a processor. A rule stores those settings in `input_json`. Schemas use JSON
-Schema through `json_schemer` and are maintained in [db/seeds.rb](../db/seeds.rb).
+Each catalog operation has an `input_schema` describing its accepted JSON
+settings. A validation or transformation rule supplies those settings in
+`input_json`. These schemas validate operation configuration, such as source
+column names and length limits. They do not describe the contents of a CSV file.
 
 See [validators](validator.md) and [transformers](transformer.md) for each
 operation's settings and behavior. The [API reference](api.md) describes how to
@@ -40,14 +41,19 @@ It accepts `{"source_column": "email"}` and rejects missing, empty, or non-strin
 source names and unexpected properties. The processor separately checks that
 `email` exists in the map's input file type.
 
-Before saving a `Validation` or `Transformation`, the model checks `input_json`
-against its catalog schema. If the record has no errors, the processor's
-`validate_configuration` hook checks constraints such as bound ordering, regex
-syntax, or source-column existence. These checks validate configuration; they
-do not process CSV values.
+Saving a rule first checks its settings against the catalog schema, then checks
+conditions such as bound ordering, regex syntax, and source-column existence.
+These checks validate configuration without processing CSV values.
 
-Schema and processor configuration failures appear in `errors[:input_json]`.
-Invalid schema documents are rejected on the catalog's `input_schema` field.
-If an invalid catalog schema reaches a rule, the rule reports an `input_json`
-error instead of processing it. API error response shapes are documented in
-[API errors](api.md#errors).
+Configuration failures identify `input_json` in the API response's `errors`
+object. See [API errors](api.md#errors) for response examples.
+
+## Maintaining operation schemas
+
+Catalog schemas use JSON Schema through `json_schemer` and are maintained in
+[db/seeds.rb](../db/seeds.rb). Catalogs are read-only through the API.
+After schema validation succeeds, the rule calls its processor's
+`validate_configuration` hook for checks that depend on other settings or saved
+records. Invalid schema documents are rejected on the catalog's `input_schema`
+field; a rule that encounters an invalid catalog schema reports an `input_json`
+error.

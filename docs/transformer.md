@@ -1,16 +1,27 @@
 # Transformers
 
-A `Transformation` selects a catalog operation and an output column within a
-map. `transform(source, destination)` reads from a source `CSV::Row`, writes the
-target field in the destination row, and returns `nil` on success or an error
-message string for an expected failure. Expected failures clear the target to
-`nil`. The source and other destination fields are preserved.
+A transformation rule selects an operation and fills one output column within
+a map. Each operation reads values from the map's input columns. The rule's
+`output_column_id` selects the target column.
 
-The conversion API that coordinates these calls and collects their errors is
-still planned. See the [API reference](api.md#transformation-rules) for creating
-rules and [input schemas](input_schemas.md) for configuration validation.
+Every JSON example below is an **`input_json` settings object**, placed inside
+a transformation request. See the [API reference](api.md#transformation-rules)
+for a complete request and [rule configuration schemas](input_schemas.md) for
+settings validation. CSV conversion execution is planned.
 
-## Single-source settings
+## Common rules
+
+- Only the documented settings are accepted.
+- Source names must be nonempty strings identifying columns in the map's input
+  file type. All declared sources must exist before the rule can be saved.
+  A configured source that no longer exists causes an error during transformation.
+- Columns referenced by a transformation cannot be deleted.
+- Source values and other output fields are preserved. An expected failure
+  clears the target to null and returns an error message.
+- Output validation rules check the produced values. Use a required rule when
+  a blank result is unacceptable. Blank handling differs by operation below.
+
+## Copy and numeric parse settings
 
 Copy, integer parse, and decimal parse accept the same `input_json`:
 
@@ -18,22 +29,12 @@ Copy, integer parse, and decimal parse accept the same `input_json`:
 { "source_column": "amount" }
 ```
 
-`source_column` is a required, nonempty string identifying a column in the map's
-input file type. Additional settings are rejected. The output column is selected
-by the rule's `output_column_id`, not by `input_json`.
-
-A nonexistent configured source column prevents saving the rule. If encountered
-during transformation, it returns an error and clears the target. An existing
-configured column with no matching CSV header supplies `nil` to the operation.
-
-`SingleSourceTransformer` shares source lookup, configuration validation, and
-source-reference reporting. It and `BaseTransformer` are abstract classes, not
-catalog choices.
+`source_column` is required.
 
 ## CopyTransformer
 
 Copies the source value unchanged, including whitespace, empty strings, and
-`nil`. A missing CSV header therefore writes `nil` without an error.
+null. A missing CSV header therefore writes null without an error.
 
 ## IntegerParseTransformer
 
@@ -41,9 +42,7 @@ Parses a base-10 integer using Ruby's `Integer`. Signs and surrounding whitespac
 are accepted; `"0042"` becomes the integer `42`. Fractional, exponent, and
 partially numeric text fail.
 
-Missing, null, empty, and whitespace-only values write `nil` without an error.
-Other invalid values clear the target and return an error such as
-`source column "amount" contains an invalid integer`.
+Missing, null, empty, and whitespace-only values write null without an error.
 
 ## DecimalParseTransformer
 
@@ -52,12 +51,8 @@ through `Float`. Signs, surrounding whitespace, and exponent notation are
 accepted; `"1.25e3"` becomes the decimal value `1250`. The destination holds a
 `BigDecimal`, not a formatted string.
 
-Missing, null, empty, and whitespace-only values write `nil` without an error.
-Malformed or partially numeric text, `NaN`, and infinities clear the target and
-return an error such as `source column "amount" contains an invalid decimal`.
-
-For both numeric parsers, attach output validators to decide whether a blank
-result is acceptable.
+Missing, null, empty, and whitespace-only values write null without an error.
+Malformed or partially numeric text, `NaN`, and infinities fail.
 
 ## ConcatenateTransformer
 
@@ -71,16 +66,12 @@ result is acceptable.
 `source_columns` is a required, nonempty array of nonempty column-name strings
 from the map's input file type. Values are joined in this order, including any
 repeated source names. One source is allowed. `separator` is an optional string
-defaulting to `""`; additional settings are rejected.
+defaulting to `""`.
 
 Missing CSV fields, null, empty, and whitespace-only values are skipped, so
 `["Alex", null, "Morgan"]` joined with a space becomes `"Alex Morgan"`. Nonblank
 values are not trimmed. If every value is blank, the result is `""` without an
-error; output validators decide whether that is acceptable.
-
-Every configured source must exist. A missing configured source prevents saving
-the rule; at runtime it clears the target and returns an error. All source names
-are reported to the existing column-deletion guard.
+error.
 
 ## SubstringTransformer
 
@@ -94,16 +85,13 @@ are reported to the existing column-deletion guard.
 
 Extracts up to `length` characters starting at the zero-based `start` position;
 `"AB1234XY"` with these settings becomes `"1234"`. Both settings are required
-nonnegative integers. Negative offsets and additional settings are rejected.
-The source uses the same lookup and deletion protection as the other
-single-source transformers.
+nonnegative integers. Negative offsets are rejected.
 
 Positions count Ruby string characters, not bytes or visual grapheme clusters.
 Whitespace, punctuation, and newlines are preserved. A length extending past
 the end returns the remaining text. A zero length or start at or beyond the end
-returns `""`. Missing CSV headers and null values write `nil` without an error;
-empty strings remain `""`. Output validators determine whether a blank result
-is acceptable.
+returns `""`. Missing CSV headers and null values write null without an error;
+empty strings remain `""`.
 
 ## TruncateTransformer
 
@@ -117,14 +105,11 @@ is acceptable.
 Keeps up to `length` characters from the start of the source value, with no
 ellipsis or other suffix. `length` is a required nonnegative integer; zero
 produces `""` for any non-null value. Values at or below the limit are unchanged.
-Additional settings are rejected. The source uses the same lookup and deletion
-protection as the other single-source transformers.
 
 Length counts Ruby string characters, not bytes or visual grapheme clusters,
 matching substring. Whitespace, punctuation, and newlines count toward the
-limit and are preserved. Missing CSV headers and null values write `nil`
-without an error; empty strings remain `""`. Output validators determine
-whether a blank result is acceptable.
+limit and are preserved. Missing CSV headers and null values write null
+without an error; empty strings remain `""`.
 
 ## DateParseTransformer
 
@@ -141,21 +126,14 @@ using the optional Ruby `strftime` `output_format`. With these settings,
 `"29/02/2024"` becomes `"02/29/2024"`. Omitting `output_format` defaults to
 `%Y-%m-%d` (ISO `YYYY-MM-DD`). An explicit output format must be a nonempty
 string; partial formats such as `%Y-%m` and literal punctuation are allowed.
-The source uses the same lookup and deletion protection as the other
-single-source transformers. Additional settings are rejected.
 
-The format must describe a complete calendar, ordinal, or ISO week date, using
-the same strict parser as `DateValidator`. Examples include `%Y-%m-%d`,
-`%d/%m/%Y`, `%d %b %Y`, `%Y-%j`, and `%G-W%V-%u`. Values must be real Gregorian
-dates and match the format exactly, including padding and month-name case.
-Surrounding whitespace and extra text fail unless part of the format.
-Incomplete formats are rejected when saving the rule.
+The input `format` follows [DateValidator's exact date-matching rules](validator.md#datevalidator).
+It must describe a complete calendar, ordinal, or ISO week date. Incomplete
+formats are rejected when saving the rule.
 
-Missing CSV headers, null, empty, and whitespace-only fields write `nil`
-without an error. Other invalid values clear the target and return an error
-such as `source column "joined_on" contains an invalid date`. Output required
-validation can reject blank results. For complete date output, configure an
-output date validator with the same format as `output_format`.
+Missing CSV headers, null, empty, and whitespace-only fields write null
+without an error. Other invalid dates fail. For complete date output, configure
+an output date validator with the same format as `output_format`.
 
 ## FormatStringTransformer
 
@@ -172,7 +150,6 @@ and `family_name = "Morgan"`, these settings produce `"Morgan, Alex"`.
 `source_columns` is a required, nonempty array of nonempty column-name strings
 from the map's input file type. `format` is a required string, including `""`.
 Repeated sources and placeholders are allowed; listed sources may be unused.
-Additional settings are rejected.
 
 Use `%{column_name}` to substitute a listed source and `%%` for a literal percent.
 Names match exactly, including spaces and Unicode; placeholder names cannot
@@ -185,11 +162,10 @@ values are treated as text; inserted values are never interpreted again.
 Missing CSV headers and null values become `""`; empty strings stay empty.
 Whitespace and template punctuation are preserved, so a missing family name
 with the example template produces `", Alex"`. No separator cleanup or blank
-skipping is applied. Output validators determine whether the result is accepted.
+skipping is applied.
 
-Every listed source must exist, even when unused by the template, and all are
-protected by the source-deletion guard. Runtime missing-source or template
-errors clear the target and return an error message.
+Every listed source must exist, including sources unused by the template.
+Runtime missing-source or template errors fail the transformation.
 
 ## ArithmeticTransformer
 
@@ -202,14 +178,12 @@ errors clear the target and return an error message.
 
 Takes exactly two ordered source names and one operator: `+`, `-`, `*`, or `/`.
 The first source is the left operand and the second is the right operand.
-Repeated names are allowed, such as multiplying a column by itself. Both sources
-must exist in the map's input file type and are protected from deletion.
-Additional settings are rejected.
+Repeated names are allowed, such as multiplying a column by itself.
 
 Values parse as finite `BigDecimal` numbers, accepting signs, surrounding
 whitespace, and exponent notation. Missing CSV headers, null, empty, and
 whitespace-only values count as zero, matching numeric comparison. Malformed
-numbers, `NaN`, and infinities fail. Source values are preserved.
+numbers, `NaN`, and infinities fail.
 
 Addition, subtraction, and multiplication produce exact `BigDecimal` results
 without an implicit rounding step; `0.1 + 0.2` produces `0.3`.
@@ -230,7 +204,6 @@ rounding. For example, `1 / 3` at scale 2 produces `0.33`, `1 / 8` produces
 `scale` is rejected for other operators.
 
 Results are numeric `BigDecimal` values, not formatted strings. Scale controls
-rounding rather than fixed-width CSV output or trailing zeroes. Output numeric
-validators determine acceptance. Invalid operands, division by zero (including
-a blank divisor), missing configured sources, and non-finite results clear the
-target and return an error message; other destination fields are preserved.
+rounding rather than fixed-width CSV output or trailing zeroes. Invalid operands,
+division by zero (including a blank divisor), missing configured sources, and
+non-finite results fail the transformation.

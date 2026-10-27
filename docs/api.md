@@ -32,6 +32,10 @@ Save the returned `id` when your application needs to read, update, or reference
 
 ### Integration order
 
+The API calls a reusable CSV format a **file type**. A **catalog entry** describes
+an available operation; a **rule** selects that operation and supplies settings
+for a particular column or map.
+
 To configure a conversion between two formats:
 
 1. Read the validator and transformer catalogs to obtain the IDs of the operations you need.
@@ -287,7 +291,7 @@ Both return arrays in ID order. Each entry contains:
 | `description` | A description of its behavior. |
 | `input_schema` | JSON Schema describing accepted `input_json` settings; null skips JSON Schema checks. |
 
-Catalogs are read-only through the API and populated by application seeds. Select operations by their returned IDs. Do not assume the same IDs across installations. See [input schemas](input_schemas.md) for schema and null-handling details.
+Catalogs are read-only through the API and populated by application seeds. Select operations by their returned IDs. Do not assume the same IDs across installations. See [rule configuration schemas](input_schemas.md) for schema and null-handling details.
 
 ## Bulk edits
 

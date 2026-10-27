@@ -1,14 +1,14 @@
 # CSVWeave
 
-**A configurable CSV conversion engine built with Ruby on Rails.**
+**Reusable CSV formats, validation rules, and transformation maps.**
 
-CSVWeave brings file formats, validation rules, and field transformations into reusable definitions. Describe the data you receive, describe the data you need, and save a map between them. The project is designed to turn those definitions into repeatable conversions with an output CSV and a structured error report.
+CSVWeave is a Ruby on Rails backend for configurable CSV conversion. Define the columns and validation rules for each file format, then map source values into the output fields you need. Formats and maps are saved through the API and reused across conversions.
 
-**Work in progress:** Format and mapping configuration, column validators, and copy, integer parse, decimal parse, concatenate, substring, truncate, date parse, format-string, and arithmetic transformers are implemented. CSV conversion execution is planned.
+The project brings together field validation, text formatting, precise numeric calculations, and date conversion in one configurable operation library.
 
-## The workflow
+## Example: customer import
 
-This example illustrates the planned conversion of three rows of customer data.
+A customer export needs a full name, a sortable name, an ISO date, and two representations of the phone number. A saved map defines how to build those fields from the source format.
 
 **Source rows**
 
@@ -20,7 +20,7 @@ This example illustrates the planned conversion of three rows of customer data.
 
 **Transformation map**
 
-The table below lists the transformations that build the destination rows, along with fields left unmapped. Each transformation fills one destination column using one or more source columns. Multiple transformations can read the same fields: the name fields produce two name formats, and `phone` supplies both the full number and its final four characters.
+Each rule fills one destination column. Source columns can be combined, reused, or omitted, and optional output fields can remain blank.
 
 | Source | Instruction | Destination |
 | --- | --- | --- |
@@ -28,13 +28,15 @@ The table below lists the transformations that build the destination rows, along
 | `family_name`, `given_name` | Join with a comma and space. | `sort_name` |
 | `joined_on` | Parse the date and write it as `YYYY-MM-DD`. | `joined_date` |
 | `phone` | Copy the full value. | `phone` |
-| `phone` | Extract the final four characters. | `phone_last4` |
+| `phone` | Take 4 characters starting at zero-based index 11. | `phone_last4` |
 | `internal_note` | Omit this source field. | None |
 | None | Leave this optional destination column blank. | `note` |
 
+The phone values in this example are 15 characters long; index 11 selects the start of the final four digits.
+
 **Destination rows**
 
-Applying the map produces the following values. Empty cells represent blank CSV fields.
+The expected output is shown below. Empty cells represent blank CSV fields.
 
 | full_name | sort_name | joined_date | phone | phone_last4 | note |
 | --- | --- | --- | --- | --- | --- |
@@ -42,43 +44,40 @@ Applying the map produces the following values. Empty cells represent blank CSV 
 | Sam Rivera | Rivera, Sam | 2026-05-03 | +1-212-555-0478 | 0478 | |
 | Jordan Lee | Lee, Jordan | 2026-06-28 | +1-206-555-0926 | 0926 | |
 
+Validation rules apply to both sides of the map. An input rule can require a name or check the source date format. An output rule can limit the length of the assembled name or check the reformatted date. The same source definition can be reused for another destination by creating another map.
+
+## Capabilities
+
+| Capability | What you can define |
+| --- | --- |
+| Reusable file formats | Named columns, output order, and validation rules shared by multiple maps. |
+| Input and output validation | Required values, length limits, regex patterns, numeric ranges, date formats and ranges, and comparisons between columns in the same row. |
+| Text transformations | Copy values, concatenate fields, extract substrings, truncate text, and build strings with named placeholders. |
+| Numeric parsing | Parse base-10 integers and precise decimals, including exponent notation for decimal values. |
+| Date conversion | Read a specified date format and write another, such as `12 Apr 2026` to `2026-04-12` or `04/12/2026`. |
+| Arithmetic | Add, subtract, multiply, or divide two source values. Decimal calculations preserve precision; division has an explicit rounding scale. |
+| Configuration checks | Validate operation settings, source references, and output-column ownership when saving rules. |
+| Configuration API | Discover operations through catalogs, create formats and maps with nested rules, and edit groups of records atomically. |
+
+For example, a sales map can multiply `unit_price` by `quantity` to produce a line total, while an output rule checks its permitted range. Decimal arithmetic keeps calculations such as `0.1 + 0.2` exact, producing `0.3`.
+
+See the [validator guide](docs/validator.md) and [transformer guide](docs/transformer.md) for settings and examples.
+
 ## Design
 
-| Component | Responsibility |
-| --- | --- |
-| **File formats** | Define ordered columns and the validation rules for each column. A format can be reused by multiple maps. |
-| **Transformation maps** | Connect a source format to a destination format and hold the instructions for filling destination columns. |
-| **Validators and transformers** | Implement checks and operations in Ruby. Catalog entries list the supported classes and describe the settings each accepts. |
-| **Conversion engine - planned** | Read a CSV file and apply a saved map, coordinating validation, transformation, output, and error reporting. |
+The Rails API stores file types, columns, validation rules, and transformation maps in PostgreSQL. Catalogs expose the available operations and their settings schemas. Each configured rule selects a Ruby processor; the same operation can be reused with different settings across columns and maps.
 
-The same validator or transformer can be configured for different columns, formats, and maps. New operations extend the Ruby library and are exposed through the catalogs.
+The conversion flow is designed around five steps:
 
-### Processing a file
+1. Read a source CSV row by header name.
+2. Validate its values against the input format's rules.
+3. Apply the map's transformations to build an output row.
+4. Validate the result against the output format's rules.
+5. Write accepted rows in output-column order and report rejected rows with their source row number, column, operation, and reason.
 
-The planned conversion engine will load the selected map and its file formats and rules. It will then process each row in order:
+Rejected rows are skipped and reported while processing continues with subsequent rows.
 
-1. **Read:** Parse the next CSV row using the source headers.
-2. **Validate input:** Check the original values against the source format's rules.
-3. **Transform:** Apply the mapping to build a destination row.
-4. **Validate output:** Check the generated values against the destination format's rules.
-5. **Write:** Write accepted rows in destination column order, including blanks for unmapped optional columns.
-
-A validation or transformation failure stops that row and reports its source row number, column, operation, and reason.
-
-Output validation catches problems introduced by transformation. For example, joining two valid source names can produce a full name that exceeds the destination's length limit.
-
-The [API reference](docs/api.md) covers endpoints and request/response contracts. The [validator guide](docs/validator.md) and [transformer guide](docs/transformer.md) describe operation settings and behavior. [Input schemas](docs/input_schemas.md) explains how configuration is validated.
-
-## Development status
-
-| Area | Status |
-| --- | --- |
-| File formats, column rules, reusable maps, and operation catalogs | Implemented, including nested creation and atomic bulk editing. |
-| Required-value, length, regex, numeric range, date, and same-row comparison validators; copy, numeric parsing, concatenate, substring, truncate, date parse, format-string, and arithmetic transformers | Implemented with configuration and row-behavior coverage. |
-| Streaming conversion, ordered output, and structured error reports | Planned. |
-| All-or-nothing and valid-rows-only processing | Planned. |
-
-The configuration foundation and planned operation library are implemented, with representative coverage combining saved input rules, transformations, and output rules. The streaming conversion engine is next.
+**Development status:** The configuration API and all documented processors are implemented. CSV file upload and the conversion endpoint are still in development.
 
 ## Run locally
 
@@ -104,7 +103,33 @@ Replace the sample PostgreSQL credentials with your local values. The API runs a
 
 Database configuration is in [config/database.yml](config/database.yml). Development and tests use separate databases.
 
-## Tests and quality checks
+## Try the configuration API
+
+With the server running, open another terminal. List the available transformation operations and their settings:
+
+```sh
+curl --fail-with-body -sS http://localhost:3000/column_transformers
+```
+
+Create a reusable file type with an email column:
+
+```sh
+curl --fail-with-body -sS http://localhost:3000/file_types \
+  -H 'Content-Type: application/json' \
+  --data '{"file_type":{"name":"Customer import","columns":[{"name":"email","position":0}]}}'
+```
+
+The response includes the new file-type ID. Retrieve the saved definitions, including their columns:
+
+```sh
+curl --fail-with-body -sS http://localhost:3000/file_types
+```
+
+Continue with the [API setup sequence](docs/api.md#integration-order) to attach validation rules, create an output format, and save a transformation map. The [validator guide](docs/validator.md) and [transformer guide](docs/transformer.md) describe the supported operations. [Rule configuration schemas](docs/input_schemas.md) explains how their settings are checked.
+
+## Development
+
+### Tests and quality checks
 
 ```sh
 RAILS_ENV=test bin/rails db:test:prepare
@@ -113,8 +138,12 @@ bin/rubocop
 RAILS_ENV=test bin/rails zeitwerk:check
 ```
 
-The suite covers model and database constraints, processor behavior, operation schemas, and HTTP contracts. Pipeline integration specs exercise saved configurations with real CSV rows, covering successful output and failures during input validation, transformation, and output validation. Failure-path coverage also checks that an invalid bulk edit restores removed rules and discards earlier additions, that edits cannot remove another format's or map's records, and that dependency checks prevent destructive deletions.
+The [spec suite](spec) covers configuration rules, processor behavior, API contracts, and composition of saved rules on real CSV rows. Specs create their own operation catalogs; do not seed the test database separately.
 
-Explore the [model specs](spec/models), [processor specs](spec/processors), [pipeline integration specs](spec/integration), and [request specs](spec/requests). Processor configuration cases live in focused files under [transformations](spec/models/transformations) and [validations](spec/models/validations), sharing record setup through explicitly required contexts. Specs create their own operation catalogs; do not seed the test database separately.
+[GitHub Actions](.github/workflows/ci.yml) runs the same test and style checks, checks autoloading, and scans with Brakeman and Bundler Audit.
 
-[GitHub Actions](.github/workflows/ci.yml) is configured to run RSpec against PostgreSQL, check Ruby style and autoloading, and scan with Brakeman and Bundler Audit.
+### Ruby processor interface
+
+Processors receive a configured `Validation` or `Transformation` record and work with `CSV::Row` values. Validators implement `validate(row)` and return `true` or `false` without changing the row. Transformers implement `transform(source, destination)`, write the target field, and return `nil` on success or an error message on failure. Expected failures clear the target to `nil` and preserve other fields.
+
+`BaseValidator`, `BaseTransformer`, and `SingleSourceTransformer` provide shared behavior and are not catalog operations. Transformers report source names through `source_column_names` so referenced columns are protected from deletion. See [app/processors](app/processors) for the implementations and [rule configuration schemas](docs/input_schemas.md) for settings validation.
