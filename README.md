@@ -78,7 +78,7 @@ The [API reference](docs/api.md) covers endpoints and request/response contracts
 | Streaming conversion, ordered output, and structured error reports | Planned. |
 | All-or-nothing and valid-rows-only processing | Planned. |
 
-The configuration foundation and planned operation library are implemented. Representative pipeline coverage remains before building the conversion engine.
+The configuration foundation and planned operation library are implemented, with representative coverage combining saved input rules, transformations, and output rules. The streaming conversion engine is next.
 
 ## Run locally
 
@@ -113,8 +113,8 @@ bin/rubocop
 RAILS_ENV=test bin/rails zeitwerk:check
 ```
 
-The suite covers model and database constraints, processor behavior, operation schemas, and HTTP contracts. Failure-path coverage checks that an invalid bulk edit restores removed rules and discards earlier additions, that edits cannot remove another format's or map's records, and that dependency checks prevent destructive deletions.
+The suite covers model and database constraints, processor behavior, operation schemas, and HTTP contracts. Pipeline integration specs exercise saved configurations with real CSV rows, covering successful output and failures during input validation, transformation, and output validation. Failure-path coverage also checks that an invalid bulk edit restores removed rules and discards earlier additions, that edits cannot remove another format's or map's records, and that dependency checks prevent destructive deletions.
 
-Explore the [model specs](spec/models), [processor specs](spec/processors), and [request specs](spec/requests). Specs create their own operation catalogs; do not seed the test database separately.
+Explore the [model specs](spec/models), [processor specs](spec/processors), [pipeline integration specs](spec/integration), and [request specs](spec/requests). Processor configuration cases live in focused files under [transformations](spec/models/transformations) and [validations](spec/models/validations), sharing record setup through explicitly required contexts. Specs create their own operation catalogs; do not seed the test database separately.
 
 [GitHub Actions](.github/workflows/ci.yml) is configured to run RSpec against PostgreSQL, check Ruby style and autoloading, and scan with Brakeman and Bundler Audit.
