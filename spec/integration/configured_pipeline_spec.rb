@@ -29,16 +29,10 @@ RSpec.describe "Configured validation and transformation pipeline", type: :model
     end
     map
   end
-  let(:loaded_map) do
-    TransformMap.includes(
-      input_file_type: { columns: { validations: :column_validator } },
-      output_file_type: { columns: { validations: :column_validator } },
-      transformations: [:column_transformer, :output_column],
-    ).find(mapping.id)
-  end
-  let(:input_validators) { validators_for(loaded_map.input_file_type) }
-  let(:output_validators) { validators_for(loaded_map.output_file_type) }
-  let(:transformers) { loaded_map.transformations.map { |rule| rule.column_transformer.get_transformer(rule) } }
+  let(:configuration) { ConversionConfigurationLoader.load(mapping.id) }
+  let(:input_validators) { configuration.input_validators }
+  let(:output_validators) { configuration.output_validators }
+  let(:transformers) { configuration.transformers }
   let(:source) do
     csv = CSV.generate do |writer|
       writer << ["family_name", "joined_on", "amount", "given_name"]
@@ -46,7 +40,7 @@ RSpec.describe "Configured validation and transformation pipeline", type: :model
     end
     CSV.parse(csv, headers: true).first
   end
-  let(:destination) { CSV::Row.new(loaded_map.output_file_type.columns.map(&:name), [nil] * 4) }
+  let(:destination) { CSV::Row.new(configuration.output_columns.map(&:name), [nil] * 4) }
 
   it "composes persisted rules into valid output and serializes the ordered CSV fields" do
     original = source.to_h
@@ -109,9 +103,5 @@ RSpec.describe "Configured validation and transformation pipeline", type: :model
 
   def add_validation(column, processor_class, settings = {})
     column.validations.create!(column_validator: ColumnValidator.find_by!(processor_class: processor_class), input_json: settings)
-  end
-
-  def validators_for(file_type)
-    file_type.columns.flat_map(&:validations).map { |rule| rule.column_validator.get_validator(rule) }
   end
 end
