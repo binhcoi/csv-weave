@@ -28,6 +28,13 @@ module Transformers
       @transformation.errors.add(:input_json, error.message)
     end
 
+    def renamed_source_configuration(old_name, new_name)
+      template = input_json.fetch("format").gsub(TOKEN) do |token|
+        token == "%{#{old_name}}" ? "%{#{new_name}}" : token
+      end
+      super.merge("format" => template)
+    end
+
     private
 
     def source_columns

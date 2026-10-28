@@ -26,6 +26,12 @@ module Transformers
       raise NotImplementedError, "#{self.class} must implement #source_column_names"
     end
 
+    # Returns settings without mutating the rule. Override for other reference shapes.
+    def renamed_source_configuration(old_name, new_name)
+      names = source_column_names.map { |name| name == old_name ? new_name : name }
+      input_json.merge("source_columns" => names)
+    end
+
     def validate_configuration
     end
   end

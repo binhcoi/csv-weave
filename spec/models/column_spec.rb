@@ -153,6 +153,21 @@ RSpec.describe Column, type: :model do
     end
   end
 
+  it "renames sources when the same column is also its map's output target" do
+    column.save!
+    mapping = TransformMap.create!(name: "Same-format copy", input_file_type: file_type, output_file_type: file_type)
+    rule = mapping.transformations.create!(output_column: column,
+                                          column_transformer: FactoryBot.create(:column_transformer),
+                                          input_json: { "source_column" => "email" })
+
+    column.update!(name: "contact_email")
+
+    expect(rule.reload.input_json).to eq("source_column" => "contact_email")
+    expect(rule.output_column_id).to eq(column.id)
+    expect(rule).to be_valid
+    expect(column.destroy).to be false
+  end
+
   describe "database constraints" do
     let(:attributes) { { file_type_id: file_type.id, name: "email", position: 0 } }
 

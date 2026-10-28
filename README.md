@@ -1,6 +1,6 @@
 # CSVWeave
 
-CSVWeave is a Ruby on Rails application for configurable CSV transformation and validation. It allows users to define file formats, configure validation rules, and map data between formats using extensible transformation operations.
+CSVWeave is a Ruby on Rails application for converting CSV data between defined formats. Users can configure source and destination schemas, attach validation rules to their columns, and define transformations between them. CSVWeave processes records according to those configurations, producing a converted CSV and reporting rows that fail validation.
 
 ## Example
 

@@ -58,16 +58,26 @@ RSpec.describe "Columns", type: :request do
   end
 
   it "updates permitted fields while keeping the record ID" do
-    other_type = FileType.create!(name: "Other import")
     patch "/columns/#{column.id}", params: { column: {
-      file_type_id: other_type.id, name: "contact_email", position: 2, id: -1,
+      file_type_id: file_type.id, name: "contact_email", position: 2, id: -1,
     } }, as: :json
 
     expect(response).to have_http_status(:ok)
     expect(column.reload.name).to eq("contact_email")
     expect(column.position).to eq(2)
-    expect(column.file_type_id).to eq(other_type.id)
+    expect(column.file_type_id).to eq(file_type.id)
     expect(response.parsed_body.fetch("id")).to eq(column.id)
+  end
+
+  it "rejects moving an unused column to another file type" do
+    other_type = FileType.create!(name: "Other import")
+
+    patch "/columns/#{column.id}", params: { column: { file_type_id: other_type.id, name: "moved" } }, as: :json
+
+    expect(response).to have_http_status(422)
+    expect(response.parsed_body).to eq("errors" => { "file_type" => ["cannot change after the column is created"] })
+    expect(column.reload.file_type_id).to eq(file_type.id)
+    expect(column.name).to eq("email")
   end
 
   it "returns status 422 without persisting an invalid update" do

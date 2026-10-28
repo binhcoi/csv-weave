@@ -5,8 +5,9 @@ class Column < ApplicationRecord
   validates :name, presence: true, uniqueness: { scope: :file_type_id }
   validates :position, presence: true, uniqueness: { scope: :file_type_id },
                        numericality: { only_integer: true, greater_than_or_equal_to: 0 }
-  validate :file_type_matches_transformations, on: :update
+  validate :file_type_cannot_change, on: :update
   before_destroy :reject_deletion_if_used_by_transformations, prepend: true
+  after_update :rename_transformation_sources, if: :saved_change_to_name?
 
   def get_data(row)
     row[name]
@@ -22,21 +23,34 @@ class Column < ApplicationRecord
   end
 
   def used_as_source?
-    source_transformations = Transformation.joins(:transform_map)
-                                          .where(transform_maps: { input_file_type_id: file_type_id })
-                                          .includes(:column_transformer)
-
     source_transformations.any? do |transformation|
       processor = transformation.column_transformer.get_transformer(transformation)
-      processor.source_column_names.include?(name)
+      processor.source_column_names.include?(name_in_database)
     end
   end
 
-  def file_type_matches_transformations
-    return unless will_save_change_to_file_type_id? && file_type
-    return unless transformations.joins(:transform_map)
-                                 .where.not(transform_maps: { output_file_type_id: file_type_id }).exists?
+  def source_transformations
+    Transformation.joins(:transform_map)
+                  .where(transform_maps: { input_file_type_id: file_type_id_in_database })
+                  .includes(:column_transformer).order(:id)
+  end
 
-    errors.add(:file_type, "cannot change while transformations target this column")
+  def rename_transformation_sources
+    old_name, new_name = saved_change_to_name
+    source_transformations.each do |transformation|
+      processor = transformation.column_transformer.get_transformer(transformation)
+      next unless processor.source_column_names.include?(old_name)
+
+      transformation.update!(input_json: processor.renamed_source_configuration(old_name, new_name))
+    end
+  rescue ActiveRecord::RecordInvalid => error
+    errors.add(:name, "cannot rename because transformation #{error.record.id} is invalid: #{error.record.errors.full_messages.join(', ')}")
+    raise ActiveRecord::RecordInvalid.new(self)
+  end
+
+  def file_type_cannot_change
+    return unless will_save_change_to_file_type_id?
+
+    errors.add(:file_type, "cannot change after the column is created")
   end
 end

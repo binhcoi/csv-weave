@@ -31,6 +31,8 @@ class ColumnsController < ApplicationController
     else
       render json: { errors: column.errors.to_hash }, status: 422
     end
+  rescue ActiveRecord::RecordInvalid => error
+    render json: { errors: error.record.errors.to_hash }, status: 422
   end
 
   # DELETE /columns/:id

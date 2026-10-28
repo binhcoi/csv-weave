@@ -30,6 +30,11 @@ module Transformers
       [source_column_name]
     end
 
+    def renamed_source_configuration(old_name, new_name)
+      name = source_column_name == old_name ? new_name : source_column_name
+      input_json.merge("source_column" => name)
+    end
+
     protected
 
     def transform_value(data, destination)

@@ -128,12 +128,14 @@ A column belongs to one file type. Its name identifies a CSV header; its positio
 
 | Field | Type | Requirement |
 | --- | --- | --- |
-| `file_type_id` | Integer | Required on create; must identify an existing file type. |
+| `file_type_id` | Integer | Required on create; must identify an existing file type. Cannot change after creation. |
 | `name` | String | Required on create; nonblank and unique within the type. |
 | `position` | Integer | Required on create; zero or greater and unique within the type. |
 | `description` | String or null | Optional. |
 
-All four fields can be supplied on update. Position gaps are allowed; deletion does not renumber the remaining columns. Moving a column to another type is rejected if that would invalidate its use as a transformation target.
+Updates can change name, position, and description. Supplying a different `file_type_id` returns HTTP 422. Position gaps are allowed; deletion does not renumber the remaining columns.
+
+Renaming a column also updates transformation source references in every map using its file type as input, including repeated sources and active format-string placeholders. Escaped placeholders and literal text remain unchanged. Output targets stay linked by column ID. The rename and reference updates are atomic: if any updated transformation is invalid, the entire update returns HTTP 422 and all changes roll back.
 
 Example body for `POST /columns`:
 
