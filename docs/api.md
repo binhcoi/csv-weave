@@ -1,14 +1,14 @@
 # API reference
 
-The current API creates and manages CSV file formats, their column rules, and transformation maps. File upload and conversion execution are not available yet.
+The API manages CSV file formats, column rules, transformation maps, and stored data files. Files can be uploaded, inspected, and downloaded. File-level validation and conversion endpoints are not available yet.
 
 Start the application using the [README setup instructions](../README.md#run-locally). The local base URL is `http://localhost:3000`.
 
-[File types](#file-types) · [Columns](#columns) · [Validations](#validation-rules) · [Maps](#transformation-maps) · [Transformations](#transformation-rules) · [Catalogs](#operation-catalogs) · [Bulk edits](#bulk-edits) · [Errors](#errors)
+[Data files](#data-files) · [File types](#file-types) · [Columns](#columns) · [Validations](#validation-rules) · [Maps](#transformation-maps) · [Transformations](#transformation-rules) · [Catalogs](#operation-catalogs) · [Bulk edits](#bulk-edits) · [Errors](#errors)
 
 ## Connecting a client
 
-Requests with a body use `Content-Type: application/json`. Single-record writes wrap attributes in a resource key, such as `file_type` or `transformation`. Updates accept only the fields you want to change; `PATCH` and `PUT` both preserve omitted fields.
+Configuration requests with a body use `Content-Type: application/json`; file uploads use multipart form data. Single-record writes wrap attributes in a resource key, such as `file_type` or `transformation`. Updates accept only the fields you want to change; `PATCH` and `PUT` both preserve omitted fields.
 
 For example, this request creates a file type:
 
@@ -46,6 +46,56 @@ To configure a conversion between two formats:
 6. Read the map to retrieve the saved transformations. Keep its ID for later reads and edits.
 
 The sections below describe each resource independently, including the request fields, returned fields, and relevant restrictions.
+
+## Data files
+
+A data file stores an uploaded file and its assigned file type. PostgreSQL holds
+the record and Active Storage metadata; local disk storage holds the bytes.
+Uploading preserves the original bytes without parsing CSV, checking headers,
+or running column validations. Empty or malformed files can be uploaded for
+later validation. The declared content type is `text/csv` and does not certify
+that the contents are valid CSV.
+
+| Method | Path | Result |
+| --- | --- | --- |
+| `POST` | `/data_files` | Upload a file; return metadata with HTTP 201 and a `Location` header. |
+| `GET` | `/data_files/:id` | Retrieve file metadata. |
+| `GET` | `/data_files/:id/download` | Redirect to an attachment download through Active Storage. |
+
+Upload using multipart fields `data_file[file_type_id]` and `data_file[file]`:
+
+```sh
+curl --fail-with-body -sS http://localhost:3000/data_files \
+  -F 'data_file[file_type_id]=10' \
+  -F 'data_file[file]=@orders.csv'
+```
+
+The file type ID must be a positive integer identifying an existing file type.
+The file must be a multipart upload; file paths, signed blob IDs, and embedded
+file contents in JSON are not accepted. Client-supplied IDs and storage keys
+are ignored.
+
+Create and read responses contain `id`, `file_type_id`, `filename`,
+`content_type`, `byte_size`, `created_at`, and `download_url`. They contain no CSV
+contents or storage keys. Use the returned ID to retrieve metadata or download:
+
+```sh
+curl --fail-with-body -sS http://localhost:3000/data_files/42
+curl --fail-with-body -L http://localhost:3000/data_files/42/download -o orders.csv
+```
+
+The default per-file upload limit is **1 GiB (1,073,741,824 bytes)**. Set
+`DATA_FILE_MAX_BYTES` to a positive integer byte count before starting Rails to
+change it. Oversized uploads return HTTP 413 before file hashing or storage.
+The size check occurs after multipart parsing; it is not a limit on request
+body buffering by the HTTP server. Unknown file types return field errors with
+HTTP 422; missing fields and malformed uploads return JSON HTTP 400.
+
+Files and their assigned file types are immutable through model updates. No
+update or deletion endpoint is provided in this step. Deleting a file type used
+by a data file returns HTTP 422. Failed storage writes roll back file metadata
+and attempt to remove partial bytes. Downloads preserve bytes and use attachment
+disposition; the application controller does not read the file into memory.
 
 ## File types
 
@@ -355,6 +405,7 @@ Each request is transactional. Success returns only the affected records, in req
 | `204` | Deleted successfully; the response has no body. |
 | `400` | Missing required request wrapper or malformed payload, array, or removal-ID format. |
 | `404` | Resource not found, including a record outside the parent of a scoped lookup. |
+| `413` | Uploaded file exceeds `DATA_FILE_MAX_BYTES`. |
 | `422` | Invalid field values, rule settings, references, or a deletion blocked by a dependency. |
 
 For ordinary malformed requests and missing records, the body contains an `error` string. Messages describe the particular failure:

@@ -6,6 +6,9 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
   resources :file_types, only: [:index, :show, :create, :update, :destroy]
+  resources :data_files, only: [:create, :show] do
+    get :download, on: :member
+  end
   patch "file_types/:file_type_id/columns", to: "columns#bulk_modify"
   patch "file_types/:file_type_id/validations", to: "validations#bulk_modify"
   resources :columns, only: [:index, :show, :create, :update, :destroy]
