@@ -1,8 +1,9 @@
 require "csv"
 require "bigdecimal"
+require "json"
 
 class CsvConversionRunner
-  Result = Data.define(:accepted_rows, :rejected_rows, :errors)
+  Result = Data.define(:accepted_rows, :rejected_rows, :error_count)
 
   class InvalidFile < StandardError
     attr_reader :error, :result
@@ -20,12 +21,15 @@ class CsvConversionRunner
     @output_headers = configuration.output_columns.map(&:name)
   end
 
-  # Caller owns both IOs. Discard output if InvalidFile is raised: it may be partial.
-  def run(input:, output:)
+  # Caller owns the IOs. Discard partial CSV on InvalidFile; keep the JSON Lines report.
+  def run(input:, output:, error_output:)
     @accepted_rows = 0
     @rejected_rows = 0
-    @errors = []
+    @error_count = 0
     @record_number = 1
+    @error_output = error_output
+    @error_output.binmode
+    @error_output.set_encoding(Encoding::UTF_8)
 
     input.binmode
     bom_encoding = input.set_encoding_by_bom
@@ -50,6 +54,7 @@ class CsvConversionRunner
       process_row(fields, headers, writer)
     end
     writer.flush
+    @error_output.flush
     result
   rescue CSV::InvalidEncodingError
     # CSV may detect invalid bytes in a buffered chunk before yielding its rows.
@@ -80,7 +85,7 @@ class CsvConversionRunner
   def process_row(fields, headers, writer)
     if fields.length != headers.length
       @rejected_rows += 1
-      @errors << row_error("row_shape", nil, "CSV", "expected #{headers.length} fields, got #{fields.length}")
+      write_error(row_error("row_shape", nil, "CSV", "expected #{headers.length} fields, got #{fields.length}"))
       return
     end
 
@@ -99,7 +104,7 @@ class CsvConversionRunner
 
     if failures.any?
       @rejected_rows += 1
-      @errors.concat(failures)
+      failures.each { |error| write_error(error) }
     else
       writer << destination.fields.map { |value| value.is_a?(BigDecimal) ? value.to_s("F") : value }
       @accepted_rows += 1
@@ -120,10 +125,17 @@ class CsvConversionRunner
 
   def invalid_file!(stage, reason, record_number: @record_number)
     error = row_error(stage, nil, "CSV", reason).merge(record_number: record_number)
+    write_error(error)
+    @error_output.flush
     raise InvalidFile.new(error, result)
   end
 
+  def write_error(error)
+    @error_output.write("#{JSON.generate(error)}\n")
+    @error_count += 1
+  end
+
   def result
-    Result.new(accepted_rows: @accepted_rows, rejected_rows: @rejected_rows, errors: @errors.freeze)
+    Result.new(accepted_rows: @accepted_rows, rejected_rows: @rejected_rows, error_count: @error_count)
   end
 end

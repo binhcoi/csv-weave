@@ -1,5 +1,6 @@
 require "rails_helper"
 require "csv"
+require "json"
 require "stringio"
 
 RSpec.describe "Configured CSV conversion", type: :model do
@@ -32,6 +33,7 @@ RSpec.describe "Configured CSV conversion", type: :model do
   end
   let(:configuration) { ConversionConfigurationLoader.load(mapping.id) }
   let(:output) { StringIO.new }
+  let(:error_output) { StringIO.new }
 
   it "converts quoted Unicode CSV through saved rules in output order without database queries" do
     configuration
@@ -43,7 +45,8 @@ RSpec.describe "Configured CSV conversion", type: :model do
       result = convert([["Morgan", "29/02/2024", "12.50", "Alex, \"A\"\n李"]])
     end
 
-    expect([result.accepted_rows, result.rejected_rows, result.errors]).to eq([1, 0, []])
+    expect([result.accepted_rows, result.rejected_rows, result.error_count]).to eq([1, 0, 0])
+    expect(report_entries).to be_empty
     expect(queries).to be_empty
     row = CSV.parse(output.string, headers: true).first
     expect(row.headers).to eq(["label", "amount", "joined_date", "optional_note"])
@@ -61,9 +64,9 @@ RSpec.describe "Configured CSV conversion", type: :model do
       ["Lee", "04/03/2024", "3.25", "Jordan"],
     ])
 
-    expect([result.accepted_rows, result.rejected_rows]).to eq([2, 3])
+    expect([result.accepted_rows, result.rejected_rows, result.error_count]).to eq([2, 3, 3])
     expect(CSV.parse(output.string, headers: true).map { |row| row["label"] }).to eq(["Morgan, Alex\nA", "Lee, Jordan"])
-    expect(result.errors).to eq([
+    expect(report_entries).to eq([
       { record_number: 3, stage: "input_validation", column: "given_name", operation: "RequiredValidator", reason: "must be present" },
       { record_number: 4, stage: "transformation", column: "amount", operation: "DecimalParseTransformer",
         reason: 'source column "amount" contains an invalid decimal' },
@@ -78,8 +81,8 @@ RSpec.describe "Configured CSV conversion", type: :model do
 
     result = convert([["Morgan", "31/02/2024", "", ""]])
 
-    expect([result.accepted_rows, result.rejected_rows]).to eq([0, 1])
-    expect(result.errors.map { |error| [error[:stage], error[:column], error[:operation], error[:reason]] }).to eq([
+    expect([result.accepted_rows, result.rejected_rows, result.error_count]).to eq([0, 1, 3])
+    expect(report_entries.map { |error| [error[:stage], error[:column], error[:operation], error[:reason]] }).to eq([
       ["input_validation", "amount", "RequiredValidator", "must be present"],
       ["input_validation", "given_name", "RequiredValidator", "must be present"],
       ["input_validation", "joined_on", "DateValidator", 'must be a valid date matching "%d/%m/%Y"'],
@@ -95,8 +98,8 @@ RSpec.describe "Configured CSV conversion", type: :model do
 
     result = convert([["Morgan", "29/02/2024", "invalid", "Alex"]])
 
-    expect([result.accepted_rows, result.rejected_rows]).to eq([0, 1])
-    expect(result.errors.map { |error| [error[:stage], error[:column]] }).to eq([
+    expect([result.accepted_rows, result.rejected_rows, result.error_count]).to eq([0, 1, 2])
+    expect(report_entries.map { |error| [error[:stage], error[:column]] }).to eq([
       ["transformation", "amount"], ["transformation", "optional_note"],
     ])
   end
@@ -107,11 +110,15 @@ RSpec.describe "Configured CSV conversion", type: :model do
 
     result = convert([["Morgan", "29/02/2024", "100.01", "Alex"]])
 
-    expect([result.accepted_rows, result.rejected_rows]).to eq([0, 1])
-    expect(result.errors.map { |error| [error[:stage], error[:column], error[:operation]] }).to eq([
+    expect([result.accepted_rows, result.rejected_rows, result.error_count]).to eq([0, 1, 2])
+    expect(report_entries.map { |error| [error[:stage], error[:column], error[:operation]] }).to eq([
       ["output_validation", "amount", "NumericRangeValidator"],
       ["output_validation", "optional_note", "RequiredValidator"],
     ])
+  end
+
+  def report_entries
+    error_output.string.each_line.map { |line| JSON.parse(line, symbolize_names: true) }
   end
 
   def convert(rows)
@@ -119,7 +126,7 @@ RSpec.describe "Configured CSV conversion", type: :model do
       writer << ["family_name", "joined_on", "amount", "given_name"]
       rows.each { |row| writer << row }
     end
-    CsvConversionRunner.new(configuration).run(input: StringIO.new(csv), output: output)
+    CsvConversionRunner.new(configuration).run(input: StringIO.new(csv), output: output, error_output: error_output)
   end
 
   def add_validation(column, processor_class, settings = {})
