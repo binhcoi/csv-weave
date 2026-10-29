@@ -4,5 +4,9 @@ module Validators
       return true if column.get_data(row).present?
       false
     end
+
+    def failure_message
+      "must be present"
+    end
   end
 end

@@ -1,7 +1,8 @@
 require "rails_helper"
 require "csv"
+require "stringio"
 
-RSpec.describe "Configured validation and transformation pipeline", type: :model do
+RSpec.describe "Configured CSV conversion", type: :model do
   let(:mapping) do
     Rails.application.load_seed
     input = FileType.create!(name: "Customer import")
@@ -30,75 +31,95 @@ RSpec.describe "Configured validation and transformation pipeline", type: :model
     map
   end
   let(:configuration) { ConversionConfigurationLoader.load(mapping.id) }
-  let(:input_validators) { configuration.input_validators }
-  let(:output_validators) { configuration.output_validators }
-  let(:transformers) { configuration.transformers }
-  let(:source) do
+  let(:output) { StringIO.new }
+
+  it "converts quoted Unicode CSV through saved rules in output order without database queries" do
+    configuration
+    queries = []
+    callback = ->(_name, _start, _finish, _id, payload) { queries << payload.fetch(:sql) }
+    result = nil
+
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      result = convert([["Morgan", "29/02/2024", "12.50", "Alex, \"A\"\n李"]])
+    end
+
+    expect([result.accepted_rows, result.rejected_rows, result.errors]).to eq([1, 0, []])
+    expect(queries).to be_empty
+    row = CSV.parse(output.string, headers: true).first
+    expect(row.headers).to eq(["label", "amount", "joined_date", "optional_note"])
+    expect(row.to_h).to eq(
+      "label" => "Morgan, Alex, \"A\"\n李", "amount" => "12.5", "joined_date" => "02/29/2024", "optional_note" => nil,
+    )
+  end
+
+  it "rejects rows at each stage and continues writing subsequent valid rows" do
+    result = convert([
+      ["Morgan", "29/02/2024", "12.50", "Alex\nA"],
+      ["Rivera", "01/03/2024", "1", ""],
+      ["Kim", "02/03/2024", "invalid", "Taylor"],
+      ["Park", "03/03/2024", "100.01", "Sam"],
+      ["Lee", "04/03/2024", "3.25", "Jordan"],
+    ])
+
+    expect([result.accepted_rows, result.rejected_rows]).to eq([2, 3])
+    expect(CSV.parse(output.string, headers: true).map { |row| row["label"] }).to eq(["Morgan, Alex\nA", "Lee, Jordan"])
+    expect(result.errors).to eq([
+      { record_number: 3, stage: "input_validation", column: "given_name", operation: "RequiredValidator", reason: "must be present" },
+      { record_number: 4, stage: "transformation", column: "amount", operation: "DecimalParseTransformer",
+        reason: 'source column "amount" contains an invalid decimal' },
+      { record_number: 5, stage: "output_validation", column: "amount", operation: "NumericRangeValidator",
+        reason: "must be a finite number >= 0.0 and <= 100.0" },
+    ])
+  end
+
+  it "reports every input validation failure and skips later stages for that record" do
+    configuration.transformers.each { |processor| expect(processor).not_to receive(:transform) }
+    configuration.output_validators.each { |processor| expect(processor).not_to receive(:validate) }
+
+    result = convert([["Morgan", "31/02/2024", "", ""]])
+
+    expect([result.accepted_rows, result.rejected_rows]).to eq([0, 1])
+    expect(result.errors.map { |error| [error[:stage], error[:column], error[:operation], error[:reason]] }).to eq([
+      ["input_validation", "amount", "RequiredValidator", "must be present"],
+      ["input_validation", "given_name", "RequiredValidator", "must be present"],
+      ["input_validation", "joined_on", "DateValidator", 'must be a valid date matching "%d/%m/%Y"'],
+    ])
+    expect(CSV.parse(output.string)).to eq([["label", "amount", "joined_date", "optional_note"]])
+  end
+
+  it "reports every transformation failure and skips output validation for that record" do
+    optional = mapping.output_file_type.columns.find_by!(name: "optional_note")
+    mapping.transformations.create!(output_column: optional, input_json: { "source_column" => "given_name" },
+                                    column_transformer: ColumnTransformer.find_by!(processor_class: "DecimalParseTransformer"))
+    configuration.output_validators.each { |processor| expect(processor).not_to receive(:validate) }
+
+    result = convert([["Morgan", "29/02/2024", "invalid", "Alex"]])
+
+    expect([result.accepted_rows, result.rejected_rows]).to eq([0, 1])
+    expect(result.errors.map { |error| [error[:stage], error[:column]] }).to eq([
+      ["transformation", "amount"], ["transformation", "optional_note"],
+    ])
+  end
+
+  it "validates unmapped output columns and reports all output failures in column order" do
+    optional = mapping.output_file_type.columns.find_by!(name: "optional_note")
+    add_validation(optional, "RequiredValidator")
+
+    result = convert([["Morgan", "29/02/2024", "100.01", "Alex"]])
+
+    expect([result.accepted_rows, result.rejected_rows]).to eq([0, 1])
+    expect(result.errors.map { |error| [error[:stage], error[:column], error[:operation]] }).to eq([
+      ["output_validation", "amount", "NumericRangeValidator"],
+      ["output_validation", "optional_note", "RequiredValidator"],
+    ])
+  end
+
+  def convert(rows)
     csv = CSV.generate do |writer|
       writer << ["family_name", "joined_on", "amount", "given_name"]
-      writer << ["Morgan", "29/02/2024", "12.50", "Alex, \"A\"\n李"]
+      rows.each { |row| writer << row }
     end
-    CSV.parse(csv, headers: true).first
-  end
-  let(:destination) { CSV::Row.new(configuration.output_columns.map(&:name), [nil] * 4) }
-
-  it "composes persisted rules into valid output and serializes the ordered CSV fields" do
-    original = source.to_h
-
-    expect(input_validators.map { |validator| validator.validate(source) }).to all(be true)
-    expect(transformers.map { |transformer| transformer.transform(source, destination) }).to all(be_nil)
-    expect(output_validators.map { |validator| validator.validate(destination) }).to all(be true)
-    expect(destination.to_h).to eq(
-      "label" => "Morgan, Alex, \"A\"\n李", "amount" => BigDecimal("12.50"),
-      "joined_date" => "02/29/2024", "optional_note" => nil,
-    )
-    expect(source.to_h).to eq(original)
-
-    csv = CSV.generate do |writer|
-      writer << destination.headers
-      writer << destination.fields
-    end
-    row = CSV.parse(csv, headers: true).first
-    expect(row.headers).to eq(["label", "amount", "joined_date", "optional_note"])
-    expect(row.values_at("label", "joined_date", "optional_note"))
-      .to eq(["Morgan, Alex, \"A\"\n李", "02/29/2024", nil])
-    expect(BigDecimal(row["amount"])).to eq(BigDecimal("12.50"))
-  end
-
-  it "identifies an input validation failure on the original CSV row" do
-    source["given_name"] = ""
-    original = source.to_h
-    failures = input_validators.reject { |validator| validator.validate(source) }
-
-    expect(failures.map { |validator| [validator.column.name, validator.class] })
-      .to eq([["given_name", Validators::RequiredValidator]])
-    expect(source.to_h).to eq(original)
-  end
-
-  it "returns a transformation failure for input that passes its configured validations" do
-    source["amount"] = "invalid"
-    original = source.to_h
-
-    expect(input_validators.map { |validator| validator.validate(source) }).to all(be true)
-    expect(transformers.map { |transformer| transformer.transform(source, destination) })
-      .to eq([nil, nil, 'source column "amount" contains an invalid decimal'])
-    expect(destination["amount"]).to be_nil
-    expect(destination["label"]).to eq("Morgan, Alex, \"A\"\n李")
-    expect(source.to_h).to eq(original)
-  end
-
-  it "rejects a successfully transformed value that violates the output format's rules" do
-    source["amount"] = "100.01"
-    original = source.to_h
-
-    expect(input_validators.map { |validator| validator.validate(source) }).to all(be true)
-    expect(transformers.map { |transformer| transformer.transform(source, destination) }).to all(be_nil)
-    expect(destination["amount"]).to eq(BigDecimal("100.01"))
-    failures = output_validators.reject { |validator| validator.validate(destination) }
-
-    expect(failures.map { |validator| [validator.column.name, validator.class] })
-      .to eq([["amount", Validators::NumericRangeValidator]])
-    expect(source.to_h).to eq(original)
+    CsvConversionRunner.new(configuration).run(input: StringIO.new(csv), output: output)
   end
 
   def add_validation(column, processor_class, settings = {})

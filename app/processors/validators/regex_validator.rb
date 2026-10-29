@@ -18,6 +18,10 @@ module Validators
       input_json.fetch("pattern")
     end
 
+    def failure_message
+      "must match the configured pattern within its time limit"
+    end
+
     def regex
       Regexp.new(pattern, timeout: 0.05)
     end

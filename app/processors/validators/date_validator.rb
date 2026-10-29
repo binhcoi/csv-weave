@@ -23,6 +23,13 @@ module Validators
       input_json.fetch("format")
     end
 
+    def failure_message
+      message = "must be a valid date matching #{format.inspect}"
+      message += " on or after #{input_json['min']}" if min
+      message += " on or before #{input_json['max']}" if max
+      message
+    end
+
     def min
       parse_date(input_json["min"], "%Y-%m-%d")
     end

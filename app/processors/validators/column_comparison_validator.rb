@@ -23,6 +23,10 @@ module Validators
       input_json["other_column"]
     end
 
+    def failure_message
+      "must satisfy #{operator} comparison with column #{other_column_name.inspect}"
+    end
+
     def other_column
       column.file_type.columns.find { |candidate| candidate.name == other_column_name }
     end

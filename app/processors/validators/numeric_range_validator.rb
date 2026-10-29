@@ -23,6 +23,13 @@ module Validators
       BigDecimal(value.to_s) unless value.nil?
     end
 
+    def failure_message
+      bounds = []
+      bounds << ">= #{min.to_s('F')}" if min
+      bounds << "<= #{max.to_s('F')}" if max
+      "must be a finite number #{bounds.join(' and ')}"
+    end
+
     def max
       value = input_json["max"]
       BigDecimal(value.to_s) unless value.nil?

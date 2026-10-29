@@ -15,6 +15,13 @@ module Validators
       input_json.fetch("min", nil)
     end
 
+    def failure_message
+      bounds = []
+      bounds << ">= #{min}" if min
+      bounds << "<= #{max}" if max
+      "length must be #{bounds.join(' and ')}"
+    end
+
     def max
       input_json.fetch("max", nil)
     end

@@ -1,0 +1,129 @@
+require "csv"
+require "bigdecimal"
+
+class CsvConversionRunner
+  Result = Data.define(:accepted_rows, :rejected_rows, :errors)
+
+  class InvalidFile < StandardError
+    attr_reader :error, :result
+
+    def initialize(error, result)
+      @error = error.freeze
+      @result = result
+      super(error.fetch(:reason))
+    end
+  end
+
+  def initialize(configuration)
+    @configuration = configuration
+    @input_headers = configuration.input_columns.map(&:name)
+    @output_headers = configuration.output_columns.map(&:name)
+  end
+
+  # Caller owns both IOs. Discard output if InvalidFile is raised: it may be partial.
+  def run(input:, output:)
+    @accepted_rows = 0
+    @rejected_rows = 0
+    @errors = []
+    @record_number = 1
+
+    input.binmode
+    bom_encoding = input.set_encoding_by_bom
+    if bom_encoding && bom_encoding != Encoding::UTF_8
+      invalid_file!("encoding", "input must be UTF-8", record_number: nil)
+    end
+    input.set_encoding(Encoding::UTF_8)
+    reader = CSV.new(input)
+    headers = reader.shift
+    validate_headers!(headers)
+
+    output.binmode
+    output.set_encoding(Encoding::UTF_8)
+    writer = CSV.new(output, row_sep: "\n")
+    writer << @output_headers
+
+    loop do
+      @record_number += 1
+      fields = reader.shift
+      break if fields.nil?
+
+      process_row(fields, headers, writer)
+    end
+    writer.flush
+    result
+  rescue CSV::InvalidEncodingError
+    # CSV may detect invalid bytes in a buffered chunk before yielding its rows.
+    invalid_file!("encoding", "input contains invalid UTF-8", record_number: nil)
+  rescue CSV::MalformedCSVError => error
+    invalid_file!("parsing", error.message)
+  end
+
+  private
+
+  def validate_headers!(headers)
+    invalid_file!("headers", "input must contain a header record") unless headers
+    if headers.empty? || headers.any?(&:blank?)
+      invalid_file!("headers", "headers must be nonblank")
+    end
+
+    duplicates = headers.tally.select { |_name, count| count > 1 }.keys
+    if duplicates.any?
+      invalid_file!("headers", "duplicate headers: #{duplicates.map(&:inspect).join(', ')}")
+    end
+
+    missing = @input_headers - headers
+    if missing.any?
+      invalid_file!("headers", "missing headers: #{missing.map(&:inspect).join(', ')}")
+    end
+  end
+
+  def process_row(fields, headers, writer)
+    if fields.length != headers.length
+      @rejected_rows += 1
+      @errors << row_error("row_shape", nil, "CSV", "expected #{headers.length} fields, got #{fields.length}")
+      return
+    end
+
+    source = CSV::Row.new(headers, fields)
+    failures = validation_errors(@configuration.input_validators, source, "input_validation")
+    if failures.empty?
+      destination = CSV::Row.new(@output_headers, Array.new(@output_headers.length))
+      failures = @configuration.transformers.filter_map do |processor|
+        reason = processor.transform(source, destination)
+        row_error("transformation", processor.output_column_name, processor.class.name.demodulize, reason) if reason
+      end
+      if failures.empty?
+        failures = validation_errors(@configuration.output_validators, destination, "output_validation")
+      end
+    end
+
+    if failures.any?
+      @rejected_rows += 1
+      @errors.concat(failures)
+    else
+      writer << destination.fields.map { |value| value.is_a?(BigDecimal) ? value.to_s("F") : value }
+      @accepted_rows += 1
+    end
+  end
+
+  def validation_errors(processors, row, stage)
+    processors.filter_map do |processor|
+      next if processor.validate(row)
+
+      row_error(stage, processor.column.name, processor.class.name.demodulize, processor.failure_message)
+    end
+  end
+
+  def row_error(stage, column, operation, reason)
+    { record_number: @record_number, stage: stage, column: column, operation: operation, reason: reason }
+  end
+
+  def invalid_file!(stage, reason, record_number: @record_number)
+    error = row_error(stage, nil, "CSV", reason).merge(record_number: record_number)
+    raise InvalidFile.new(error, result)
+  end
+
+  def result
+    Result.new(accepted_rows: @accepted_rows, rejected_rows: @rejected_rows, errors: @errors.freeze)
+  end
+end
