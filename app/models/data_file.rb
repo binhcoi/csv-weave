@@ -4,6 +4,7 @@ class DataFile < ApplicationRecord
 
   belongs_to :file_type
   has_one_attached :file
+  has_many :validation_runs
 
   validate :file_is_present_and_within_limit
   validate :uploaded_file_cannot_change, on: :update

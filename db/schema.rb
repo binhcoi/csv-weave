@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_29_002302) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_09_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -111,6 +111,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_002302) do
     t.index ["transform_map_id"], name: "index_transformations_on_transform_map_id"
   end
 
+  create_table "validation_runs", force: :cascade do |t|
+    t.bigint "data_file_id", null: false
+    t.bigint "file_type_id", null: false
+    t.string "configuration_digest", null: false
+    t.string "status", default: "queued", null: false
+    t.integer "accepted_rows"
+    t.integer "rejected_rows"
+    t.integer "error_count"
+    t.text "failure_reason"
+    t.datetime "started_at"
+    t.datetime "heartbeat_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["data_file_id", "configuration_digest"], name: "index_validation_runs_reusable", unique: true, where: "((status)::text <> 'failed'::text)"
+    t.index ["data_file_id"], name: "index_validation_runs_on_data_file_id"
+    t.index ["file_type_id"], name: "index_validation_runs_on_file_type_id"
+    t.index ["heartbeat_at"], name: "index_validation_runs_running", where: "((status)::text = 'running'::text)"
+    t.check_constraint "status::text = ANY (ARRAY['queued'::character varying, 'running'::character varying, 'succeeded'::character varying, 'rejected'::character varying, 'failed'::character varying]::text[])", name: "validation_runs_status_check"
+  end
+
   create_table "validations", force: :cascade do |t|
     t.bigint "column_id", null: false
     t.bigint "column_validator_id", null: false
@@ -130,6 +151,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_002302) do
   add_foreign_key "transformations", "column_transformers"
   add_foreign_key "transformations", "columns", column: "output_column_id"
   add_foreign_key "transformations", "transform_maps"
+  add_foreign_key "validation_runs", "data_files"
+  add_foreign_key "validation_runs", "file_types"
   add_foreign_key "validations", "column_validators"
   add_foreign_key "validations", "columns"
 end

@@ -8,6 +8,10 @@ Rails.application.routes.draw do
   resources :file_types, only: [:index, :show, :create, :update, :destroy]
   resources :data_files, only: [:create, :show] do
     get :download, on: :member
+    post :validate, on: :member, to: "validation_runs#create_for_data_file"
+  end
+  resources :validation_runs, only: [:create, :show] do
+    get :error_report, on: :member
   end
   patch "file_types/:file_type_id/columns", to: "columns#bulk_modify"
   patch "file_types/:file_type_id/validations", to: "validations#bulk_modify"
