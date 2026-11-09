@@ -45,10 +45,17 @@ class ValidationRunsController < ApplicationController
 
   def start(data_file)
     run, created = ValidationRun.start!(data_file)
-    # 202 for a new run; 200 when an existing run for the same file and configuration is reused.
-    render json: serialize(run), status: created ? :accepted : :ok, location: validation_run_url(run)
+    render json: serialize(run), status: start_status(run, created), location: validation_run_url(run)
   rescue ActiveRecord::RecordInvalid => error
     render json: { errors: error.record.errors.to_hash }, status: 422
+  end
+
+  # 202: a new run was started. 200: an existing run for the same file and configuration was reused.
+  # 503: the run was created but its job could not be enqueued.
+  def start_status(run, created)
+    return :ok unless created
+
+    run.failed? ? :service_unavailable : :accepted
   end
 
   def serialize(run)

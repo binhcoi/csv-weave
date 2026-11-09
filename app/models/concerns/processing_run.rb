@@ -36,7 +36,7 @@ module ProcessingRun
 
     # Return the reusable run matching key, or create one with the extra attributes and enqueue it.
     # Returns [run, created]. A run created already finished (e.g. rejected) is not enqueued.
-    def find_or_start!(key, **attributes)
+    def find_or_start!(key, attempts: 2, **attributes)
       existing = reusable.find_by(key)
       return [existing, false] if existing
 
@@ -45,8 +45,13 @@ module ProcessingRun
       run.enqueue_job if run.queued?
       [run, true]
     rescue ActiveRecord::RecordNotUnique
-      # A concurrent request created the same run first.
-      [reusable.find_by!(key), false]
+      # A concurrent request created the same run first. If that run has already failed (e.g. its
+      # enqueue failed), it is no longer reusable, so try once more to create a fresh run.
+      winner = reusable.find_by(key)
+      return [winner, false] if winner
+      raise if attempts <= 1
+
+      find_or_start!(key, attempts: attempts - 1, **attributes)
     end
   end
 

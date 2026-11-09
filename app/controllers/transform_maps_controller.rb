@@ -56,6 +56,9 @@ class TransformMapsController < ApplicationController
     else
       render json: { errors: transform_map.errors.to_hash }, status: 422
     end
+  rescue ActiveRecord::InvalidForeignKey
+    # A conversion run was created after the dependency check.
+    render json: { errors: { base: ["cannot delete a transform map used by a conversion run"] } }, status: 422
   end
 
   private

@@ -82,7 +82,7 @@ See [Validator reference](docs/validator.md), [Transformer reference](docs/trans
 
 ## Run locally
 
-Requires Ruby 3.3.7, PostgreSQL, and Bundler 4.0.11.
+Requires Ruby 4.0.9, PostgreSQL, and Bundler 4.0.11.
 
 ```bash
 gem install bundler -v 4.0.11
@@ -94,10 +94,10 @@ export DB_USER=postgres
 export DB_PASSWORD=postgres
 
 bin/rails db:prepare
-bin/rails server
+SOLID_QUEUE_IN_PUMA=1 bin/rails server
 ```
 
-The configuration API runs at `http://localhost:3000`. Database preparation seeds the catalogs of supported validators and transformers.
+The configuration API runs at `http://localhost:3000`. Database preparation seeds the catalogs of supported validators and transformers and creates the Solid Queue database. `SOLID_QUEUE_IN_PUMA=1` runs the background worker for validation and conversion runs inside the server.
 
 You can inspect the available operations:
 
@@ -114,7 +114,7 @@ curl --fail-with-body -sS http://localhost:3000/file_types \
   --data '{"file_type":{"name":"Partner customers","columns":[{"name":"given_name","position":0},{"name":"family_name","position":1}]}}'
 ```
 
-The [API reference](docs/api.md) covers attaching validation rules, creating destination formats, defining transformations, and updating saved configurations.
+The [API reference](docs/api.md) covers attaching validation rules, creating destination formats, defining transformations, updating saved configurations, and validating or converting uploaded files.
 
 ## Development
 
@@ -126,7 +126,7 @@ CI=true RAILS_ENV=test bundle exec rspec
 bin/rubocop
 ```
 
-RSpec covers models, configuration APIs, individual processors, and composition of saved processing rules. GitHub Actions also runs linting, autoloading checks, and security scans.
+RSpec covers models, configuration APIs, individual processors, composition of saved processing rules, and the background validation and conversion runs. GitHub Actions also runs linting, autoloading checks, and security scans.
 
 ## License
 

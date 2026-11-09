@@ -120,6 +120,34 @@ RSpec.describe ValidationRun, type: :model do
       expect([run, created]).to eq([winner, false])
     end
 
+    it "creates a fresh run when the concurrent winner has already failed" do
+      digest = FileTypeConfigurationDigest.for(file_type.id)
+      # The concurrent winner: inserted first, then marked failed when its enqueue failed.
+      winner = create_run(configuration_digest: digest, status: "failed")
+      inserts = 0
+      allow(described_class).to receive(:create!).and_wrap_original do |original, **attributes|
+        inserts += 1
+        # The first insert collides with the winner while it was still queued.
+        raise ActiveRecord::RecordNotUnique, "duplicate key" if inserts == 1
+
+        original.call(**attributes)
+      end
+
+      run, created = described_class.start!(data_file)
+
+      expect(created).to be(true)
+      expect(run).to be_queued
+      expect(run).not_to eq(winner)
+      expect(inserts).to eq(2)
+    end
+
+    it "re-raises when the insert keeps colliding with no reusable run to return" do
+      allow(described_class).to receive(:create!).and_raise(ActiveRecord::RecordNotUnique, "duplicate key")
+
+      expect { described_class.start!(data_file) }.to raise_error(ActiveRecord::RecordNotUnique)
+      expect(described_class).to have_received(:create!).twice
+    end
+
     it "marks the run failed when the job cannot be enqueued, so a later request can start again" do
       allow(ValidationRunJob).to receive(:perform_later).and_raise(ActiveJob::EnqueueError, "queue down")
 

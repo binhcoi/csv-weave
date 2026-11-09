@@ -25,16 +25,16 @@ CSVWeave is a Ruby on Rails application for defining CSV formats, validating the
 - [x] Streaming JSON Lines error reports with record, stage, column, operation, and reason.
 - [x] Valid rows continue through conversion; rejected rows are omitted and reported.
 
-The validation and conversion runners work as application services. HTTP endpoints for starting and tracking those operations are still in progress.
-
 ## In progress: File-processing API
 
-- [ ] Review and finalize the shared validation/conversion runner implementation.
-- [ ] Add `ProcessingRun` records for operation type, status, counts, input file, error report, and conversion output.
-- [ ] Run validation and conversion as background jobs using Active Job / Solid Queue.
-- [ ] Expose APIs to start operations, check status, and download outputs and error reports.
-- [ ] Enforce input-file/map compatibility and revalidate saved configuration at execution time.
-- [ ] Handle failed runs and partial output cleanup; add request-level and end-to-end coverage.
+- [x] Review and finalize the shared validation/conversion runner implementation.
+- [x] Add `ValidationRun` and `ConversionRun` records for status, counts, input file, map, error report, and conversion output.
+- [x] Run validation and conversion as background jobs using Active Job / Solid Queue, without automatic retries.
+- [x] Expose APIs to start operations, check status, and download outputs and error reports.
+- [x] Enforce input-file/map compatibility and revalidate saved configuration at execution time.
+- [x] Reuse existing runs for an unchanged file and configuration; recover stale runs.
+- [x] Handle failed runs and partial output cleanup; add model, job, and request-level coverage.
+- [ ] Add end-to-end coverage with synthetic test data.
 
 **Outcome:** Users can upload a CSV, validate it independently, convert it with a saved map, and retrieve the results through the API.
 

@@ -177,4 +177,23 @@ RSpec.describe ValidationRunJob, type: :job do
     expect(run.accepted_rows).to be_nil
     expect(run.error_report).not_to be_attached
   end
+
+  it "refreshes the heartbeat while a long run is in progress" do
+    stub_const("ProcessingRun::HEARTBEAT_INTERVAL", 0.05.seconds)
+    run = create_run(upload("name,email\nAda,a@example.com\n"))
+    beats = []
+    allow_any_instance_of(CsvValidationRunner).to receive(:run).and_wrap_original do |original, **kw|
+      4.times do
+        sleep 0.1
+        beats << ValidationRun.where(id: run.id).pick(:heartbeat_at)
+      end
+      original.call(**kw)
+    end
+
+    described_class.perform_now(run)
+
+    expect(beats.uniq.size).to be > 1
+    expect(beats.last).to be > run.reload.started_at
+    expect(run).to be_succeeded
+  end
 end

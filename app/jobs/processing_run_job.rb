@@ -50,7 +50,7 @@ class ProcessingRunJob < ApplicationJob
   end
 
   def start_heartbeat(run)
-    task = Concurrent::TimerTask.new(execution_interval: ProcessingRun::HEARTBEAT_INTERVAL.to_i) do
+    task = Concurrent::TimerTask.new(execution_interval: ProcessingRun::HEARTBEAT_INTERVAL.to_f) do
       Rails.application.executor.wrap do
         run.class.where(id: run.id, status: "running").update_all(heartbeat_at: Time.current)
       end

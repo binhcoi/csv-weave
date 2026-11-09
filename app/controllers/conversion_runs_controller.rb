@@ -51,12 +51,22 @@ class ConversionRunsController < ApplicationController
     return render(json: { errors: errors }, status: 422) if errors.any?
 
     run, created = ConversionRun.start!(data_file, transform_map)
-    # 422 when the file type does not match the map (the rejected run is still returned and reused);
-    # otherwise 202 for a new run and 200 when an existing run for the same configuration is reused.
-    status = if run.file_type_mismatch? then 422 elsif created then :accepted else :ok end
-    render json: serialize(run), status: status, location: conversion_run_url(run)
+    render json: serialize(run), status: start_status(run, created), location: conversion_run_url(run)
   rescue ActiveRecord::RecordInvalid => error
     render json: { errors: error.record.errors.to_hash }, status: 422
+  rescue ActiveRecord::InvalidForeignKey
+    # The map was deleted after it was looked up. Data files cannot be deleted.
+    render json: { errors: { transform_map: ["must exist"] } }, status: 422
+  end
+
+  # 422: the file type does not match the map (the rejected run is still returned and reused).
+  # 503: the run was created but its job could not be enqueued.
+  # 202: a new run was started. 200: an existing run for the same configuration was reused.
+  def start_status(run, created)
+    return 422 if run.file_type_mismatch?
+    return :ok unless created
+
+    run.failed? ? :service_unavailable : :accepted
   end
 
   def download(attachment, label)

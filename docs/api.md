@@ -1,10 +1,10 @@
 # API reference
 
-The API manages CSV file formats, column rules, transformation maps, and stored data files. Files can be uploaded, inspected, and downloaded. File-level validation and conversion endpoints are not available yet.
+The API manages CSV file formats, column rules, transformation maps, and stored data files. Files can be uploaded, inspected, and downloaded. Stored files can be validated against their file type or converted with a transformation map; both operations run in the background.
 
-Start the application using the [README setup instructions](../README.md#run-locally). The local base URL is `http://localhost:3000`.
+Start the application using the [README setup instructions](../README.md#run-locally). The local base URL is `http://localhost:3000`; in a Docker development container, use the host port from that container's `.env` (`APP_PORT`).
 
-[Data files](#data-files) · [File types](#file-types) · [Columns](#columns) · [Validations](#validation-rules) · [Maps](#transformation-maps) · [Transformations](#transformation-rules) · [Catalogs](#operation-catalogs) · [Bulk edits](#bulk-edits) · [Errors](#errors)
+[Data files](#data-files) · [Validation runs](#validation-runs) · [Conversion runs](#conversion-runs) · [File types](#file-types) · [Columns](#columns) · [Validations](#validation-rules) · [Maps](#transformation-maps) · [Transformations](#transformation-rules) · [Catalogs](#operation-catalogs) · [Bulk edits](#bulk-edits) · [Errors](#errors)
 
 ## Connecting a client
 
@@ -96,6 +96,151 @@ update or deletion endpoint is provided in this step. Deleting a file type used
 by a data file returns HTTP 422. Failed storage writes roll back file metadata
 and attempt to remove partial bytes. Downloads preserve bytes and use attachment
 disposition; the application controller does not read the file into memory.
+
+## Validation runs
+
+A validation run checks a stored data file against the file type it was uploaded
+as. It runs in the background and produces row counts and a JSON Lines error
+report. Validation does not modify the data file.
+
+| Method | Path | Result |
+| --- | --- | --- |
+| `POST` | `/data_files/:id/validate` | Start a run, or return the existing one. No body. |
+| `POST` | `/validation_runs` | Same, with body `{"validation_run":{"data_file_id":42}}`. |
+| `GET` | `/validation_runs/:id` | Status, counts, and the report URL. |
+| `GET` | `/validation_runs/:id/error_report` | Redirect to the JSON Lines error report. |
+
+```sh
+curl --fail-with-body -sS -X POST http://localhost:3000/data_files/42/validate
+curl --fail-with-body -sS http://localhost:3000/validation_runs/7
+curl --fail-with-body -L http://localhost:3000/validation_runs/7/error_report -o errors.jsonl
+```
+
+Responses contain `id`, `data_file_id`, `file_type_id`, `status`,
+`accepted_rows`, `rejected_rows`, `error_count`, `failure_reason`,
+`started_at`, `finished_at`, `created_at`, `updated_at`, and
+`error_report_url` (`null` until a report exists). A `Location` header points
+to the run.
+
+```json
+{
+  "id": 7, "data_file_id": 42, "file_type_id": 10, "status": "succeeded",
+  "accepted_rows": 2, "rejected_rows": 1, "error_count": 1, "failure_reason": null,
+  "started_at": "2026-11-09T19:31:46.551Z", "finished_at": "2026-11-09T19:31:46.595Z",
+  "created_at": "2026-11-09T19:31:45.971Z", "updated_at": "2026-11-09T19:31:46.596Z",
+  "error_report_url": "http://localhost:3000/validation_runs/7/error_report"
+}
+```
+
+### Run statuses
+
+Validation and conversion runs share these statuses:
+
+| Status | Meaning |
+| --- | --- |
+| `queued` | Waiting for a background worker. |
+| `running` | Being processed. |
+| `succeeded` | The whole file was processed. Individual rows may still have been rejected; see the counts and error report. |
+| `rejected` | The input cannot be processed: invalid encoding, missing or duplicate headers, malformed CSV, or (conversion only) a file type that does not match the map. `failure_reason` explains why; the error report, when present, holds the details. |
+| `failed` | A system problem: invalid saved configuration, a configuration change after the request, an unexpected error, or a stale run (see below). No files are kept. |
+
+Counts are `null` until the run finishes. A rejected run reports the rows
+processed before the file-level error.
+
+### Reuse and re-running
+
+Requests do not create duplicate work. If a data file already has a `queued`,
+`running`, `succeeded`, or `rejected` run for the **current** configuration, the
+request returns that run with HTTP 200 instead of starting another. A new run
+starts, with HTTP 202, when:
+
+- there is no previous run;
+- the previous run `failed`; or
+- the configuration changed since that run: the file type's columns, its
+  validation rules, or the validator catalog entries they use. Renaming a file
+  type or editing its description does not count as a change.
+
+If the configuration changes after a run is requested but before it starts, the
+run fails with `configuration changed after the run was requested`; request it
+again to use the new configuration.
+
+Runs are never retried automatically. A run whose worker stops responding for
+15 minutes, or that has not started within 24 hours, is marked `failed`
+(`worker stopped responding` or `job did not start within 24 hours`), and the
+next request starts a new run.
+
+### Error report
+
+The report has one JSON object per line, in file order. Each entry has
+`record_number` (the CSV record, counting the header as 1; `null` for
+file-level encoding errors), `stage` (`encoding`, `headers`, `parsing`,
+`row_shape`, `input_validation`, `transformation`, or `output_validation`),
+`column`, `operation`, and `reason`:
+
+```json
+{"record_number":3,"stage":"input_validation","column":"name","operation":"RequiredValidator","reason":"must be present"}
+```
+
+Every `succeeded` run has a report, which is empty when no row was rejected.
+A run rejected for invalid file contents also has one; a conversion rejected
+because its file type does not match the map has none. Input columns not defined by the file type are allowed
+and ignored.
+
+## Conversion runs
+
+A conversion run converts a stored data file with a transformation map. Each
+row passes input validation, transformation, and output validation; rows that
+pass all three are written to the output CSV in the output file type's column
+order, and the rest are recorded in the error report. Statuses, reuse,
+recovery, and the report format are the same as for
+[validation runs](#validation-runs).
+
+| Method | Path | Result |
+| --- | --- | --- |
+| `POST` | `/data_files/:id/convert` | Start a run with body `{"conversion_run":{"transform_map_id":5}}`, or return the existing one. |
+| `POST` | `/conversion_runs` | Same, with body `{"conversion_run":{"data_file_id":42,"transform_map_id":5}}`. |
+| `GET` | `/conversion_runs/:id` | Status, counts, and the file URLs. |
+| `GET` | `/conversion_runs/:id/output` | Redirect to the converted CSV. |
+| `GET` | `/conversion_runs/:id/error_report` | Redirect to the JSON Lines error report. |
+
+```sh
+curl --fail-with-body -sS http://localhost:3000/data_files/42/convert \
+  -H 'Content-Type: application/json' \
+  --data '{"conversion_run":{"transform_map_id":5}}'
+curl --fail-with-body -sS http://localhost:3000/conversion_runs/3
+curl --fail-with-body -L http://localhost:3000/conversion_runs/3/output -o converted.csv
+```
+
+Responses contain `id`, `data_file_id`, `transform_map_id`, `status`, the same
+counts and timestamps as validation runs, `output_url`, and `error_report_url`.
+
+The data file's file type must be the map's input file type. Otherwise the
+request returns HTTP 422 with a run that is already `rejected` and was never
+queued; repeating the request returns the same run. For reuse, the
+configuration covers the map's file types, both file types' columns and
+validation rules, and the map's transformations and the transformer catalog
+entries they use. Renaming a map does not count as a change.
+
+The output CSV is kept only for `succeeded` runs. A `rejected` run keeps the
+error report and discards any partial output.
+
+### Starting and downloading runs
+
+| Case | Status |
+| --- | --- |
+| New run started | `202` |
+| Existing run reused | `200` |
+| Conversion file type does not match the map | `422`, body is the rejected run |
+| Unknown data file in the path | `404` |
+| Unknown data file or map in the body | `422` with `errors.data_file` / `errors.transform_map` |
+| Missing wrapper or non-positive-integer ID | `400` |
+| Run created but its job could not be queued | `503`, body is the `failed` run; retry the request later |
+| Download while `queued` or `running` | `409` |
+| Download of a file the run does not have | `404` |
+
+Runs are processed by Solid Queue. In development, set `SOLID_QUEUE_IN_PUMA=1`
+to run the worker inside the Rails server; otherwise runs stay `queued` until a
+worker (`bin/jobs`) starts.
 
 ## File types
 
@@ -248,7 +393,7 @@ A map connects an input file type to an output file type. Its transformations de
 | `GET` | `/transform_maps/:id` | One map, including transformations. |
 | `POST` | `/transform_maps` | Create a map, optionally with transformations; return its metadata. |
 | `PATCH` / `PUT` | `/transform_maps/:id` | Update the map's metadata or file-type references. |
-| `DELETE` | `/transform_maps/:id` | Delete the map and its transformations. |
+| `DELETE` | `/transform_maps/:id` | Delete the map and its transformations; HTTP 422 if a conversion run uses it. |
 
 **Request key:** `transform_map`
 
@@ -287,7 +432,7 @@ Create and update responses contain `id`, `name`, `description`, `input_file_typ
 
 Same-type maps, repeated names, and repeated input/output pairs are allowed. A map can leave output columns unmapped. Changing the output type is rejected while existing transformations target columns outside the proposed output type. Changing the input type does not rewrite existing source-column settings.
 
-Deleting a map retains its file types, columns, and operation catalogs.
+Deleting a map retains its file types, columns, and operation catalogs. A map used by any conversion run cannot be deleted and returns HTTP 422 with a `base` error.
 
 ## Transformation rules
 
@@ -402,11 +547,14 @@ Each request is transactional. Success returns only the affected records, in req
 | --- | --- |
 | `200` | Successful read or update. |
 | `201` | Created a resource or rules. |
+| `202` | Started a validation or conversion run; poll the returned run. |
 | `204` | Deleted successfully; the response has no body. |
 | `400` | Missing required request wrapper or malformed payload, array, or removal-ID format. |
 | `404` | Resource not found, including a record outside the parent of a scoped lookup. |
+| `409` | A run's file was requested before the run finished. |
 | `413` | Uploaded file exceeds `DATA_FILE_MAX_BYTES`. |
-| `422` | Invalid field values, rule settings, references, or a deletion blocked by a dependency. |
+| `422` | Invalid field values, rule settings, references, a deletion blocked by a dependency, or a conversion whose file type does not match the map. |
+| `503` | A run was created but its background job could not be queued. |
 
 For ordinary malformed requests and missing records, the body contains an `error` string. Messages describe the particular failure:
 
