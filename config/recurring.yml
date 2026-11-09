@@ -10,8 +10,8 @@
 #     schedule: at 5am every day
 
 shared: &shared
-  recover_stale_validation_runs:
-    class: RecoverStaleValidationRunsJob
+  recover_stale_runs:
+    class: RecoverStaleRunsJob
     schedule: every minute
 
 development:

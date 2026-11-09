@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_09_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_10_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -73,6 +73,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_200000) do
     t.check_constraint "\"position\" >= 0", name: "nonnegative_position"
   end
 
+  create_table "conversion_runs", force: :cascade do |t|
+    t.bigint "data_file_id", null: false
+    t.bigint "transform_map_id", null: false
+    t.string "configuration_digest", null: false
+    t.string "status", default: "queued", null: false
+    t.integer "accepted_rows"
+    t.integer "rejected_rows"
+    t.integer "error_count"
+    t.text "failure_reason"
+    t.datetime "started_at"
+    t.datetime "heartbeat_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["data_file_id", "transform_map_id", "configuration_digest"], name: "index_conversion_runs_reusable", unique: true, where: "((status)::text <> 'failed'::text)"
+    t.index ["data_file_id"], name: "index_conversion_runs_on_data_file_id"
+    t.index ["heartbeat_at"], name: "index_conversion_runs_running", where: "((status)::text = 'running'::text)"
+    t.index ["transform_map_id"], name: "index_conversion_runs_on_transform_map_id"
+    t.check_constraint "status::text = ANY (ARRAY['queued'::character varying, 'running'::character varying, 'succeeded'::character varying, 'rejected'::character varying, 'failed'::character varying]::text[])", name: "conversion_runs_status_check"
+  end
+
   create_table "data_files", force: :cascade do |t|
     t.bigint "file_type_id", null: false
     t.datetime "created_at", null: false
@@ -125,6 +146,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_200000) do
     t.datetime "finished_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_validation_runs_queued", where: "((status)::text = 'queued'::text)"
     t.index ["data_file_id", "configuration_digest"], name: "index_validation_runs_reusable", unique: true, where: "((status)::text <> 'failed'::text)"
     t.index ["data_file_id"], name: "index_validation_runs_on_data_file_id"
     t.index ["file_type_id"], name: "index_validation_runs_on_file_type_id"
@@ -145,6 +167,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_200000) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "columns", "file_types"
+  add_foreign_key "conversion_runs", "data_files"
+  add_foreign_key "conversion_runs", "transform_maps"
   add_foreign_key "data_files", "file_types"
   add_foreign_key "transform_maps", "file_types", column: "input_file_type_id"
   add_foreign_key "transform_maps", "file_types", column: "output_file_type_id"

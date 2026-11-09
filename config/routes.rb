@@ -9,6 +9,11 @@ Rails.application.routes.draw do
   resources :data_files, only: [:create, :show] do
     get :download, on: :member
     post :validate, on: :member, to: "validation_runs#create_for_data_file"
+    post :convert, on: :member, to: "conversion_runs#create_for_data_file"
+  end
+  resources :conversion_runs, only: [:create, :show] do
+    get :output, on: :member
+    get :error_report, on: :member
   end
   resources :validation_runs, only: [:create, :show] do
     get :error_report, on: :member

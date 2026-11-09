@@ -50,8 +50,12 @@ class TransformMapsController < ApplicationController
 
   # DELETE /transform_maps/:id
   def destroy
-    TransformMap.find(params[:id]).destroy!
-    head :no_content
+    transform_map = TransformMap.find(params[:id])
+    if transform_map.destroy
+      head :no_content
+    else
+      render json: { errors: transform_map.errors.to_hash }, status: 422
+    end
   end
 
   private
