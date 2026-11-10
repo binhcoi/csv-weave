@@ -150,15 +150,12 @@ RSpec.describe ValidationRunJob, type: :job do
     expect(run.error_report).not_to be_attached
   end
 
-  it "records a heartbeat when it claims the run and stops the heartbeat afterwards" do
+  it "records a heartbeat when it claims the run" do
     run = create_run(upload("name,email\nAda,a@example.com\n"))
-    task = nil
-    allow(Concurrent::TimerTask).to receive(:new).and_wrap_original { |original, *args, **kw, &block| task = original.call(*args, **kw, &block) }
 
     described_class.perform_now(run)
 
     expect(run.reload.heartbeat_at).to be_within(1.second).of(run.started_at)
-    expect(task).not_to be_running
   end
 
   it "keeps the recovered outcome when the run was marked stale before it finished" do
@@ -178,12 +175,30 @@ RSpec.describe ValidationRunJob, type: :job do
     expect(run.error_report).not_to be_attached
   end
 
-  it "refreshes the heartbeat while a long run is in progress" do
+  it "refreshes the heartbeat from the job thread as records are processed" do
+    stub_const("ProcessingRun::HEARTBEAT_INTERVAL", 0.05.seconds)
+    run = create_run(upload("name,email\n" + Array.new(4) { |i| "Ada#{i},a@example.com\n" }.join))
+    beats = []
+    allow_any_instance_of(CsvValidationRunner).to receive(:process_row).and_wrap_original do |original, *args|
+      sleep 0.1
+      beats << ValidationRun.where(id: run.id).pick(:heartbeat_at)
+      original.call(*args)
+    end
+
+    described_class.perform_now(run)
+
+    expect(beats.uniq.size).to be > 1
+    expect(beats.last).to be > run.reload.started_at
+    expect(run).to be_succeeded
+  end
+
+  it "stops the heartbeat when the job hangs, so the run can be recovered" do
     stub_const("ProcessingRun::HEARTBEAT_INTERVAL", 0.05.seconds)
     run = create_run(upload("name,email\nAda,a@example.com\n"))
     beats = []
     allow_any_instance_of(CsvValidationRunner).to receive(:run).and_wrap_original do |original, **kw|
-      4.times do
+      # Simulate a stuck runner: no records are processed for several heartbeat intervals.
+      3.times do
         sleep 0.1
         beats << ValidationRun.where(id: run.id).pick(:heartbeat_at)
       end
@@ -192,8 +207,6 @@ RSpec.describe ValidationRunJob, type: :job do
 
     described_class.perform_now(run)
 
-    expect(beats.uniq.size).to be > 1
-    expect(beats.last).to be > run.reload.started_at
-    expect(run).to be_succeeded
+    expect(beats.uniq.size).to eq(1)
   end
 end

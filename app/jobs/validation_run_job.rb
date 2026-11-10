@@ -11,7 +11,7 @@ class ValidationRunJob < ProcessingRunJob
     report_attachment = { error_report: [report, "validation_run_#{run.id}_errors.jsonl", "application/x-ndjson"] }
     runner = CsvValidationRunner.new(columns: configuration.columns, validators: configuration.validators)
     begin
-      result = run.data_file.file.open { |input| runner.run(input: input, error_output: report) }
+      result = run.data_file.file.open { |input| runner.run(input: input, error_output: report, on_row: heartbeat) }
       finish(run, :succeeded, result: result, attachments: report_attachment)
     rescue CsvValidationRunner::InvalidFile => error
       finish(run, :rejected, result: error.result, attachments: report_attachment, failure_reason: error.message)

@@ -165,8 +165,8 @@ run fails with `configuration changed after the run was requested`; request it
 again to use the new configuration.
 
 Runs are never retried automatically. A run whose worker stops responding for
-15 minutes, or that has not started within 24 hours, is marked `failed`
-(`worker stopped responding` or `job did not start within 24 hours`), and the
+15 minutes, that has been running for more than 12 hours, or that has not started within 24 hours, is marked `failed`
+(`worker stopped responding`, `run exceeded 12 hours`, or `job did not start within 24 hours`), and the
 next request starts a new run.
 
 ### Error report

@@ -175,6 +175,18 @@ RSpec.describe ValidationRun, type: :model do
       expect(done.reload).to be_succeeded
     end
 
+    it "fails running runs that started more than 12 hours ago even with a fresh heartbeat" do
+      now = Time.current
+      overdue = create_run(configuration_digest: "a", status: "running", started_at: now - 13.hours, heartbeat_at: now)
+      long = create_run(configuration_digest: "b", status: "running", started_at: now - 11.hours, heartbeat_at: now)
+
+      expect(described_class.recover_stale!(now: now)).to eq(1)
+
+      expect(overdue.reload).to be_failed
+      expect(overdue.failure_reason).to eq("run exceeded 12 hours")
+      expect(long.reload).to be_running
+    end
+
     it "fails queued runs older than 24 hours and leaves newer queued runs alone" do
       now = Time.current
       lost = create_run(configuration_digest: "a", created_at: now - 25.hours)

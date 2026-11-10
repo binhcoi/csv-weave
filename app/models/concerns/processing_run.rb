@@ -8,6 +8,8 @@ module ProcessingRun
   # A running job refreshes heartbeat_at this often; a running run is stale after STALE_AFTER without one.
   HEARTBEAT_INTERVAL = 30.seconds
   STALE_AFTER = 15.minutes
+  # A running run is stopped after this long even if its heartbeat is fresh (e.g. stuck in a loop over rows).
+  MAX_RUNTIME = 12.hours
   # A queued run whose job has not started within this time is assumed lost.
   QUEUED_STALE_AFTER = 24.hours
 
@@ -25,11 +27,13 @@ module ProcessingRun
     # Mark stale runs as failed so they stop blocking new requests. Returns the number recovered.
     # Each UPDATE re-checks the status, so a run a job claims or finishes concurrently is left alone.
     def recover_stale!(now: Time.current)
+      overdue = where(status: "running").where(started_at: ...(now - MAX_RUNTIME))
+        .update_all(status: "failed", failure_reason: "run exceeded 12 hours", finished_at: now, updated_at: now)
       running = where(status: "running").where(heartbeat_at: ...(now - STALE_AFTER))
         .update_all(status: "failed", failure_reason: "worker stopped responding", finished_at: now, updated_at: now)
       queued = where(status: "queued").where(created_at: ...(now - QUEUED_STALE_AFTER))
         .update_all(status: "failed", failure_reason: "job did not start within 24 hours", finished_at: now, updated_at: now)
-      running + queued
+      overdue + running + queued
     end
 
     private

@@ -4,6 +4,9 @@ require "tempfile"
 # marked failed, and a later request starts a new run. If the worker dies mid-run, the heartbeat
 # stops and RecoverStaleRunsJob marks the run failed.
 #
+# The heartbeat is written from the job thread itself (between CSV records), not a timer thread,
+# so a job that hangs also stops its heartbeat and is recovered as stale.
+#
 # Subclasses implement #execute(run), which returns the final status, runner result, files to
 # attach, and failure reason by calling #finish.
 class ProcessingRunJob < ApplicationJob
@@ -16,7 +19,8 @@ class ProcessingRunJob < ApplicationJob
     return unless claim(run)
 
     @tempfiles = []
-    heartbeat = start_heartbeat(run)
+    @run = run
+    @last_heartbeat = run.heartbeat_at
     begin
       execute(run)
     rescue ConfigurationValidation::InvalidConfiguration => error
@@ -26,7 +30,6 @@ class ProcessingRunJob < ApplicationJob
       Rails.logger.error("#{run.class.name} #{run.id} failed: #{error.class}: #{error.message}")
       finish(run, :failed, failure_reason: "unexpected error (#{error.class})")
     ensure
-      heartbeat&.shutdown
       @tempfiles.each do |file|
         file.close
         File.unlink(file.path) if File.exist?(file.path)
@@ -49,14 +52,15 @@ class ProcessingRunJob < ApplicationJob
     claimed == 1
   end
 
-  def start_heartbeat(run)
-    task = Concurrent::TimerTask.new(execution_interval: ProcessingRun::HEARTBEAT_INTERVAL.to_f) do
-      Rails.application.executor.wrap do
-        run.class.where(id: run.id, status: "running").update_all(heartbeat_at: Time.current)
-      end
+  # Callable passed to the runners as on_row. Writes at most once per HEARTBEAT_INTERVAL.
+  def heartbeat
+    @heartbeat ||= lambda do
+      now = Time.current
+      next if now - @last_heartbeat < ProcessingRun::HEARTBEAT_INTERVAL
+
+      @last_heartbeat = now
+      @run.class.where(id: @run.id, status: "running").update_all(heartbeat_at: now)
     end
-    task.execute
-    task
   end
 
   # Attach files and write the outcome only while the run is still ours. If recovery already

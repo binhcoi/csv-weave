@@ -20,7 +20,8 @@ class CsvValidationRunner
   end
 
   # Caller owns both IOs and can retain the JSON Lines report on InvalidFile.
-  def run(input:, error_output:)
+  # on_row, if given, is called on the caller's thread after each record (e.g. for a heartbeat).
+  def run(input:, error_output:, on_row: nil)
     @accepted_rows = 0
     @rejected_rows = 0
     @error_count = 0
@@ -47,6 +48,7 @@ class CsvValidationRunner
       break if fields.nil?
 
       process_row(fields, headers)
+      on_row&.call
     end
     finish_output
     @error_output.flush

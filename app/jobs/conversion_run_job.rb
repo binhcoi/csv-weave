@@ -12,7 +12,9 @@ class ConversionRunJob < ProcessingRunJob
     report_attachment = { error_report: [report, "conversion_run_#{run.id}_errors.jsonl", "application/x-ndjson"] }
     runner = CsvConversionRunner.new(configuration)
     begin
-      result = run.data_file.file.open { |input| runner.run(input: input, output: output, error_output: report) }
+      result = run.data_file.file.open do |input|
+        runner.run(input: input, output: output, error_output: report, on_row: heartbeat)
+      end
       finish(run, :succeeded, result: result,
                               attachments: report_attachment.merge(output: [output, "conversion_run_#{run.id}.csv", "text/csv"]))
     rescue CsvValidationRunner::InvalidFile => error

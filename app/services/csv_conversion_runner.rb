@@ -8,9 +8,9 @@ class CsvConversionRunner < CsvValidationRunner
   end
 
   # Discard partial CSV on InvalidFile; the shared runner flushes the error report.
-  def run(input:, output:, error_output:)
+  def run(input:, output:, error_output:, on_row: nil)
     @output = output
-    super(input: input, error_output: error_output)
+    super(input: input, error_output: error_output, on_row: on_row)
   end
 
   private
