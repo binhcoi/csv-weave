@@ -1,0 +1,13 @@
+{"record_number":3,"stage":"input_validation","column":"reg_id","operation":"RequiredValidator","reason":"must be present"}
+{"record_number":4,"stage":"input_validation","column":"reg_id","operation":"RegexValidator","reason":"must match the configured pattern within its time limit"}
+{"record_number":5,"stage":"input_validation","column":"given_name","operation":"LengthValidator","reason":"length must be <= 20"}
+{"record_number":6,"stage":"input_validation","column":"email","operation":"RegexValidator","reason":"must match the configured pattern within its time limit"}
+{"record_number":7,"stage":"input_validation","column":"confirm_email","operation":"StringComparisonValidator","reason":"must satisfy == comparison with column \"email\""}
+{"record_number":8,"stage":"input_validation","column":"registered_on","operation":"DateValidator","reason":"must be a valid date matching \"%Y-%m-%d\" on or after 2026-01-01 on or before 2026-12-31"}
+{"record_number":9,"stage":"input_validation","column":"registered_on","operation":"DateValidator","reason":"must be a valid date matching \"%Y-%m-%d\" on or after 2026-01-01 on or before 2026-12-31"}
+{"record_number":10,"stage":"input_validation","column":"tickets","operation":"NumericComparisonValidator","reason":"must satisfy <= comparison with column \"group_size\""}
+{"record_number":17,"stage":"input_validation","column":"reg_id","operation":"RequiredValidator","reason":"must be present"}
+{"record_number":17,"stage":"input_validation","column":"given_name","operation":"RequiredValidator","reason":"must be present"}
+{"record_number":17,"stage":"input_validation","column":"email","operation":"RegexValidator","reason":"must match the configured pattern within its time limit"}
+{"record_number":17,"stage":"input_validation","column":"confirm_email","operation":"StringComparisonValidator","reason":"must satisfy == comparison with column \"email\""}
+{"record_number":17,"stage":"input_validation","column":"registered_on","operation":"DateValidator","reason":"must be a valid date matching \"%Y-%m-%d\" on or after 2026-01-01 on or before 2026-12-31"}

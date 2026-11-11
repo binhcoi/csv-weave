@@ -1,0 +1,18 @@
+reg_id,given_name,family_name,email,confirm_email,registered_on,event_on,tickets,ticket_price,discount,booking_fee,group_size,notes
+REG-T1001,Testa,Fakeworth,t1@example.test,t1@example.test,2026-03-15,12/09/2026,2,19.95,5.00,1.50,3,Fake ok row
+,Fakey,Testerson,b1@example.test,b1@example.test,2026-03-01,12/09/2026,1,5.00,0,1.00,1,blank reg_id
+REG-0002,Fakey,Testerson,b2@example.test,b2@example.test,2026-03-01,12/09/2026,1,5.00,0,1.00,1,reg_id misses T
+REG-T1003,Testalongfakenameyyyy,Testerson,b3@example.test,b3@example.test,2026-03-01,12/09/2026,1,5.00,0,1.00,1,21-char given_name
+REG-T1004,Fakey,Testerson,b4@gmail.com,b4@gmail.com,2026-03-01,12/09/2026,1,5.00,0,1.00,1,wrong email domain
+REG-T1005,Fakey,Testerson,b5@example.test,other@example.test,2026-03-01,12/09/2026,1,5.00,0,1.00,1,confirm mismatch
+REG-T1006,Fakey,Testerson,b6@example.test,b6@example.test,2025-12-31,12/09/2026,1,5.00,0,1.00,1,registered too early
+REG-T1007,Fakey,Testerson,b7@example.test,b7@example.test,2026-02-31,12/09/2026,1,5.00,0,1.00,1,impossible date
+REG-T1008,Fakey,Testerson,b8@example.test,b8@example.test,2026-03-01,12/09/2026,5,5.00,0,1.00,2,more tickets than group
+REG-T1009,Fakey,Testerson,b9@example.test,b9@example.test,2026-03-01,12/09/2026,1.5,5.00,0,1.00,2,fractional tickets
+REG-T1010,Fakey,Testerson,b10@example.test,b10@example.test,2026-03-01,12/09/2026,1,abc,0,1.00,1,malformed price
+REG-T1011,Fakey,Testerson,b11@example.test,b11@example.test,2026-03-01,12/09/2026,,5.00,0,1.00,0,group size zero
+REG-T1012,Fakey,Testerson,b12@example.test,b12@example.test,2026-03-01,12/09/2026,11,5.00,0,1.00,12,too many tickets
+REG-T1013,Fakey,Testerson,b13@example.test,b13@example.test,2026-03-01,12/09/2026,1,-5.00,0,1.00,1,negative price
+REG-T1014,Fakey,Testerson,b14@example.test,b14@example.test,2026-03-01,15/12/2025,1,5.00,0,1.00,1,event before 2026
+,,Testerson,b15@gmail.com,other@example.test,2027-05-05,12/09/2026,1,5.00,0,1.00,1,many input failures at once
+REG-T1017,Mocky,Dummington,t2@example.test,t2@example.test,2026-04-02,13/09/2026,1,4.50,0,1.00,1,Another fake ok row

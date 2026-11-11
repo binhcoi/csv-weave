@@ -1,0 +1,24 @@
+{"record_number":3,"stage":"input_validation","column":"reg_id","operation":"RequiredValidator","reason":"must be present"}
+{"record_number":4,"stage":"input_validation","column":"reg_id","operation":"RegexValidator","reason":"must match the configured pattern within its time limit"}
+{"record_number":5,"stage":"input_validation","column":"given_name","operation":"LengthValidator","reason":"length must be <= 20"}
+{"record_number":6,"stage":"input_validation","column":"email","operation":"RegexValidator","reason":"must match the configured pattern within its time limit"}
+{"record_number":7,"stage":"input_validation","column":"confirm_email","operation":"StringComparisonValidator","reason":"must satisfy == comparison with column \"email\""}
+{"record_number":8,"stage":"input_validation","column":"registered_on","operation":"DateValidator","reason":"must be a valid date matching \"%Y-%m-%d\" on or after 2026-01-01 on or before 2026-12-31"}
+{"record_number":9,"stage":"input_validation","column":"registered_on","operation":"DateValidator","reason":"must be a valid date matching \"%Y-%m-%d\" on or after 2026-01-01 on or before 2026-12-31"}
+{"record_number":10,"stage":"input_validation","column":"tickets","operation":"NumericComparisonValidator","reason":"must satisfy <= comparison with column \"group_size\""}
+{"record_number":11,"stage":"transformation","column":"tickets","operation":"IntegerParseTransformer","reason":"source column \"tickets\" contains an invalid integer"}
+{"record_number":12,"stage":"transformation","column":"ticket_price","operation":"DecimalParseTransformer","reason":"source column \"ticket_price\" contains an invalid decimal"}
+{"record_number":12,"stage":"transformation","column":"subtotal","operation":"ArithmeticTransformer","reason":"source column \"ticket_price\" contains an invalid finite number"}
+{"record_number":12,"stage":"transformation","column":"net_price","operation":"ArithmeticTransformer","reason":"source column \"ticket_price\" contains an invalid finite number"}
+{"record_number":12,"stage":"transformation","column":"price_with_fee","operation":"ArithmeticTransformer","reason":"source column \"ticket_price\" contains an invalid finite number"}
+{"record_number":12,"stage":"transformation","column":"price_per_person","operation":"ArithmeticTransformer","reason":"source column \"ticket_price\" contains an invalid finite number"}
+{"record_number":13,"stage":"transformation","column":"price_per_person","operation":"ArithmeticTransformer","reason":"cannot divide by zero"}
+{"record_number":14,"stage":"output_validation","column":"tickets","operation":"NumericRangeValidator","reason":"must be a finite number >= 1.0 and <= 10.0"}
+{"record_number":15,"stage":"output_validation","column":"ticket_price","operation":"NumericRangeValidator","reason":"must be a finite number >= 0.0"}
+{"record_number":15,"stage":"output_validation","column":"price_per_person","operation":"NumericRangeValidator","reason":"must be a finite number >= 0.0"}
+{"record_number":16,"stage":"output_validation","column":"event_date","operation":"DateValidator","reason":"must be a valid date matching \"%Y-%m-%d\" on or after 2026-01-01"}
+{"record_number":17,"stage":"input_validation","column":"reg_id","operation":"RequiredValidator","reason":"must be present"}
+{"record_number":17,"stage":"input_validation","column":"given_name","operation":"RequiredValidator","reason":"must be present"}
+{"record_number":17,"stage":"input_validation","column":"email","operation":"RegexValidator","reason":"must match the configured pattern within its time limit"}
+{"record_number":17,"stage":"input_validation","column":"confirm_email","operation":"StringComparisonValidator","reason":"must satisfy == comparison with column \"email\""}
+{"record_number":17,"stage":"input_validation","column":"registered_on","operation":"DateValidator","reason":"must be a valid date matching \"%Y-%m-%d\" on or after 2026-01-01 on or before 2026-12-31"}

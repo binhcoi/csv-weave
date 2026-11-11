@@ -1,0 +1,5 @@
+badge_id,full_name,display_name,badge_label,email,event_date,tickets,ticket_price,subtotal,net_price,price_with_fee,price_per_person,notes_short,internal_ref
+T0001,Testa Fakeworth,"Fakeworth, Testa",Testa - 100% fake,testa@example.test,2026-09-12,2,19.95,39.9,14.95,21.45,6.65,"Test attendee, ",
+T0002,Mocky,", Mocky",Mocky - 100% fake,mocky@example.test,2026-09-12,1,8.0,8.0,8.0,9.5,8.0,Fake note,
+T0003,Dummy Placeholder,"Placeholder, Dummy",Dummy - 100% fake,dummy@example.test,2026-09-13,3,15.0,45.0,12.5,17.0,3.75,This is a very ,
+T0004,Sampla Mockridge,"Mockridge, Sampla",Sampla - 100% fake,sampla@example.test,2026-09-14,3,10.0,30.0,9.0,10.5,3.33,Short fake,

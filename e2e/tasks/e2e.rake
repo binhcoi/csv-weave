@@ -12,10 +12,12 @@ namespace :e2e do
     refuse_in_production!
     require Rails.root.join("e2e/support/configuration_seeder")
 
-    configuration = E2e::ConfigurationSeeder.seed!
-    puts "input_file_type_id:  #{configuration.input_file_type.id}  (#{configuration.input_file_type.name})"
-    puts "output_file_type_id: #{configuration.output_file_type.id}  (#{configuration.output_file_type.name})"
-    puts "transform_map_id:    #{configuration.transform_map.id}  (#{configuration.transform_map.name})"
+    E2e::ConfigurationSeeder.seed_all!.each do |scenario, configuration|
+      puts "#{scenario}:"
+      puts "  input_file_type_id:  #{configuration.input_file_type.id}  (#{configuration.input_file_type.name})"
+      puts "  output_file_type_id: #{configuration.output_file_type.id}  (#{configuration.output_file_type.name})"
+      puts "  transform_map_id:    #{configuration.transform_map.id}  (#{configuration.transform_map.name})"
+    end
   end
 
   desc "Delete all #{E2E_PREFIX} records, their uploaded files, and their runs"
@@ -47,14 +49,15 @@ namespace :e2e do
     counts.each { |label, count| puts "deleted #{count} #{label}" }
   end
 
-  desc "Run the Postman collection with Newman against this container's own server"
+  desc "Run the Postman collection with Newman against this container's own server (FOLDER=Basic to run one folder)"
   task :newman do
     collection = File.expand_path("../postman/CSVWeave.postman_collection.json", __dir__)
     abort "missing #{collection}" unless File.exist?(collection)
 
     reports = File.expand_path("../reports", __dir__)
     FileUtils.mkdir_p(reports)
-    sh "newman", "run", collection,
+    folder = ENV["FOLDER"].presence
+    sh "newman", "run", collection, *(folder ? ["--folder", folder] : []),
        "--env-var", "baseUrl=#{ENV.fetch('E2E_BASE_URL', 'http://localhost:3000')}",
        "--working-dir", File.expand_path("../fixtures", __dir__),
        "--reporters", "cli,junit", "--reporter-junit-export", File.join(reports, "newman.xml")

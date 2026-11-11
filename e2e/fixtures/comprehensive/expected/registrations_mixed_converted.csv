@@ -1,0 +1,3 @@
+badge_id,full_name,display_name,badge_label,email,event_date,tickets,ticket_price,subtotal,net_price,price_with_fee,price_per_person,notes_short,internal_ref
+T1001,Testa Fakeworth,"Fakeworth, Testa",Testa - 100% fake,t1@example.test,2026-09-12,2,19.95,39.9,14.95,21.45,6.65,Fake ok row,
+T1017,Mocky Dummington,"Dummington, Mocky",Mocky - 100% fake,t2@example.test,2026-09-13,1,4.5,4.5,4.5,5.5,4.5,Another fake ok,

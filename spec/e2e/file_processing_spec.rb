@@ -7,10 +7,10 @@ require Rails.root.join("e2e/support/configuration_seeder")
 RSpec.describe "End-to-end file processing", type: :request do
   include ActiveJob::TestHelper
 
-  let(:fixtures) { Rails.root.join("e2e/fixtures") }
+  let(:fixtures) { Rails.root.join("e2e/fixtures/basic") }
   let(:configuration) do
     Rails.application.load_seed
-    E2e::ConfigurationSeeder.seed!
+    E2e::ConfigurationSeeder.seed!(:basic)
   end
 
   after do
@@ -22,13 +22,14 @@ RSpec.describe "End-to-end file processing", type: :request do
     end
   end
 
-  def upload(name, content: nil)
+  def upload(name, content: nil, file_type: nil)
+    file_type ||= configuration.input_file_type
     file = if content
              Rack::Test::UploadedFile.new(StringIO.new(content), "text/csv", true, original_filename: name)
     else
              Rack::Test::UploadedFile.new(fixtures.join(name).to_s, "text/csv")
     end
-    post "/data_files", params: { data_file: { file_type_id: configuration.input_file_type.id, file: file } }
+    post "/data_files", params: { data_file: { file_type_id: file_type.id, file: file } }
     expect(response).to have_http_status(:created)
     response.parsed_body.fetch("id")
   end
@@ -123,6 +124,40 @@ RSpec.describe "End-to-end file processing", type: :request do
     get run_url
     expect(response.parsed_body).to include("status" => "failed",
                                             "failure_reason" => "configuration changed after the run was requested")
+  end
+
+  describe "comprehensive scenario" do
+    let(:comprehensive) do
+      Rails.application.load_seed
+      E2e::ConfigurationSeeder.seed!(:comprehensive)
+    end
+    let(:fixtures) { Rails.root.join("e2e/fixtures/comprehensive") }
+
+    it "validates and converts registrations using every cataloged operation" do
+      data_file_id = upload("e2e_test_registrations_valid.csv", file_type: comprehensive.input_file_type)
+
+      run = start_and_perform("/data_files/#{data_file_id}/validate")
+      expect(run).to include("status" => "succeeded", "accepted_rows" => 4, "rejected_rows" => 0, "error_count" => 0)
+
+      run = start_and_perform("/data_files/#{data_file_id}/convert",
+                              { conversion_run: { transform_map_id: comprehensive.transform_map.id } })
+      expect(run).to include("status" => "succeeded", "accepted_rows" => 4, "rejected_rows" => 0, "error_count" => 0)
+      expect(download(run.fetch("output_url"))).to eq(expected("registrations_valid_converted.csv"))
+    end
+
+    it "reports a failure for every rule across all three stages for the mixed registrations" do
+      data_file_id = upload("e2e_test_registrations_mixed.csv", file_type: comprehensive.input_file_type)
+
+      run = start_and_perform("/data_files/#{data_file_id}/validate")
+      expect(run).to include("status" => "succeeded", "accepted_rows" => 8, "rejected_rows" => 9, "error_count" => 13)
+      expect(download(run.fetch("error_report_url"))).to eq(expected("registrations_mixed_validation_errors.jsonl"))
+
+      run = start_and_perform("/data_files/#{data_file_id}/convert",
+                              { conversion_run: { transform_map_id: comprehensive.transform_map.id } })
+      expect(run).to include("status" => "succeeded", "accepted_rows" => 2, "rejected_rows" => 15, "error_count" => 24)
+      expect(download(run.fetch("output_url"))).to eq(expected("registrations_mixed_converted.csv"))
+      expect(download(run.fetch("error_report_url"))).to eq(expected("registrations_mixed_conversion_errors.jsonl"))
+    end
   end
 
   it "converts a large file", :slow do
