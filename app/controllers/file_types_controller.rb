@@ -11,13 +11,19 @@ class FileTypesController < ApplicationController
 
     FileType.transaction do
       file_type.save!
-      nested_items(payload, :columns).each_with_index do |column_payload, column_index|
+      # Create every column before any rule, so a same-row comparison rule can reference a column
+      # listed later in the request.
+      column_payloads = nested_items(payload, :columns)
+      columns = column_payloads.each_with_index.map do |column_payload, column_index|
         error_prefix = "columns[#{column_index}]."
-        column = file_type.columns.create!(column_payload.permit(:name, :description, :position))
+        file_type.columns.create!(column_payload.permit(:name, :description, :position))
+      end
+      file_type.columns.reset
 
+      column_payloads.each_with_index do |column_payload, column_index|
         nested_items(column_payload, :validations).each_with_index do |validation_payload, validation_index|
           error_prefix = "columns[#{column_index}].validations[#{validation_index}]."
-          column.validations.create!(rule_parameters(validation_payload, :column_validator_id))
+          columns[column_index].validations.create!(rule_parameters(validation_payload, :column_validator_id))
         end
       end
     end

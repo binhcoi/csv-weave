@@ -97,7 +97,8 @@ column on the left with `other_column` on the right. Both use these settings:
 ```
 
 Both keys are required. `other_column` must be a nonempty string naming a column
-in the same file type. Define both columns before attaching the rule. Operators
+in the same file type. When creating a file type with nested columns, the other
+column may appear anywhere in the request; otherwise it must already exist. Operators
 are `==`, `!=`, `<`, `<=`, `>`, and `>=`.
 
 ### StringComparisonValidator

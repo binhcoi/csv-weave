@@ -104,6 +104,41 @@ RSpec.describe "File types", type: :request do
       expect(response.parsed_body.fetch("errors").fetch("columns[1].validations[0].input_json").join).to include("limit")
     end
 
+    it "lets a nested comparison rule reference a column listed later in the request" do
+      Rails.application.load_seed
+      comparison = ColumnValidator.find_by!(processor_class: "NumericComparisonValidator")
+      columns = [
+        { name: "tickets", position: 0, validations: [
+          { column_validator_id: comparison.id, input_json: { other_column: "group_size", operator: "<=" } },
+        ] },
+        { name: "group_size", position: 1 },
+      ]
+
+      post "/file_types", params: { file_type: { name: "Registrations", columns: columns } }, as: :json
+
+      expect(response).to have_http_status(:created)
+      tickets = FileType.find(response.parsed_body.fetch("id")).columns.find_by!(name: "tickets")
+      expect(tickets.validations.pluck(:input_json)).to eq([{ "other_column" => "group_size", "operator" => "<=" }])
+    end
+
+    it "still rejects a nested comparison rule naming a column absent from the request" do
+      Rails.application.load_seed
+      comparison = ColumnValidator.find_by!(processor_class: "StringComparisonValidator")
+      columns = [
+        { name: "email", position: 0, validations: [
+          { column_validator_id: comparison.id, input_json: { other_column: "missing", operator: "==" } },
+        ] },
+        { name: "confirm_email", position: 1 },
+      ]
+
+      expect do
+        post "/file_types", params: { file_type: { name: "Registrations", columns: columns } }, as: :json
+      end.not_to change { [FileType.count, Column.count, Validation.count] }
+
+      expect(response).to have_http_status(422)
+      expect(response.parsed_body.fetch("errors")).to have_key("columns[0].validations[0].input_json")
+    end
+
     it "rejects a nonexistent validator and rolls back earlier columns and rules" do
       catalog = FactoryBot.create(:column_validator)
       columns = [

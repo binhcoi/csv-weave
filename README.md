@@ -33,8 +33,8 @@ Validation rules belong to the file types, not the map. For example, the supplie
 
 ```csv
 order_id,customer_name,order_date,sku,quantity,line_total
-A1001,Alex Morgan,2026-04-12,0042,2,39.90
-A1002,Sam Rivera,2026-05-03,0107,3,13.50
+A1001,Alex Morgan,2026-04-12,0042,2,39.9
+A1002,Sam Rivera,2026-05-03,0107,3,13.5
 ```
 
 **Rejected rows**
@@ -126,7 +126,7 @@ CI=true RAILS_ENV=test bundle exec rspec
 bin/rubocop
 ```
 
-RSpec covers models, configuration APIs, individual processors, composition of saved processing rules, and the background validation and conversion runs. GitHub Actions also runs linting, autoloading checks, and security scans.
+RSpec covers models, configuration APIs, individual processors, composition of saved processing rules, the background validation and conversion runs, and end-to-end API flows using the e2e fixtures. GitHub Actions also runs linting, autoloading checks, and security scans.
 
 End-to-end testing uses clearly fake `E2E-TEST` data. See [e2e/README.md](e2e/README.md) for fixtures, Postman, and Newman.
 

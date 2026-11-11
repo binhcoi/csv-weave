@@ -957,7 +957,7 @@
                 "url": "{{baseUrl}}/file_types",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"file_type\": {\n    \"name\": \"E2E-TEST Postman event registrations {{runTag}}\",\n    \"columns\": [\n      {\n        \"name\": \"reg_id\",\n        \"position\": 0,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Required}}\n          },\n          {\n            \"column_validator_id\": {{v_Regex}},\n            \"input_json\": {\n              \"pattern\": \"\\\\AREG-T[0-9]{4}\\\\z\"\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"given_name\",\n        \"position\": 1,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Required}}\n          },\n          {\n            \"column_validator_id\": {{v_Length}},\n            \"input_json\": {\n              \"max\": 20\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"family_name\",\n        \"position\": 2,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Length}},\n            \"input_json\": {\n              \"min\": 0,\n              \"max\": 30\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"email\",\n        \"position\": 3,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Regex}},\n            \"input_json\": {\n              \"pattern\": \"@example\\\\.test\\\\z\"\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"confirm_email\",\n        \"position\": 4,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_StringComparison}},\n            \"input_json\": {\n              \"other_column\": \"email\",\n              \"operator\": \"==\"\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"registered_on\",\n        \"position\": 5,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Date}},\n            \"input_json\": {\n              \"format\": \"%Y-%m-%d\",\n              \"min\": \"2026-01-01\",\n              \"max\": \"2026-12-31\"\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"event_on\",\n        \"position\": 6,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Date}},\n            \"input_json\": {\n              \"format\": \"%d/%m/%Y\"\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"tickets\",\n        \"position\": 7\n      },\n      {\n        \"name\": \"ticket_price\",\n        \"position\": 8\n      },\n      {\n        \"name\": \"discount\",\n        \"position\": 9\n      },\n      {\n        \"name\": \"booking_fee\",\n        \"position\": 10\n      },\n      {\n        \"name\": \"group_size\",\n        \"position\": 11\n      },\n      {\n        \"name\": \"notes\",\n        \"position\": 12\n      }\n    ]\n  }\n}"
+                  "raw": "{\n  \"file_type\": {\n    \"name\": \"E2E-TEST Postman event registrations {{runTag}}\",\n    \"columns\": [\n      {\n        \"name\": \"reg_id\",\n        \"position\": 0,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Required}}\n          },\n          {\n            \"column_validator_id\": {{v_Regex}},\n            \"input_json\": {\n              \"pattern\": \"\\\\AREG-T[0-9]{4}\\\\z\"\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"given_name\",\n        \"position\": 1,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Required}}\n          },\n          {\n            \"column_validator_id\": {{v_Length}},\n            \"input_json\": {\n              \"max\": 20\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"family_name\",\n        \"position\": 2,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Length}},\n            \"input_json\": {\n              \"min\": 0,\n              \"max\": 30\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"email\",\n        \"position\": 3,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Regex}},\n            \"input_json\": {\n              \"pattern\": \"@example\\\\.test\\\\z\"\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"confirm_email\",\n        \"position\": 4,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_StringComparison}},\n            \"input_json\": {\n              \"other_column\": \"email\",\n              \"operator\": \"==\"\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"registered_on\",\n        \"position\": 5,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Date}},\n            \"input_json\": {\n              \"format\": \"%Y-%m-%d\",\n              \"min\": \"2026-01-01\",\n              \"max\": \"2026-12-31\"\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"event_on\",\n        \"position\": 6,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Date}},\n            \"input_json\": {\n              \"format\": \"%d/%m/%Y\"\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"tickets\",\n        \"position\": 7,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_NumericComparison}},\n            \"input_json\": {\n              \"other_column\": \"group_size\",\n              \"operator\": \"<=\"\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"ticket_price\",\n        \"position\": 8\n      },\n      {\n        \"name\": \"discount\",\n        \"position\": 9\n      },\n      {\n        \"name\": \"booking_fee\",\n        \"position\": 10\n      },\n      {\n        \"name\": \"group_size\",\n        \"position\": 11\n      },\n      {\n        \"name\": \"notes\",\n        \"position\": 12\n      }\n    ]\n  }\n}"
                 }
               },
               "event": [
@@ -977,56 +977,6 @@
                     "exec": [
                       "pm.test(\"created\", () => pm.response.to.have.status(201));",
                       "pm.collectionVariables.set(\"full_inputFileTypeId\", pm.response.json().id);"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Read input columns",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": "{{baseUrl}}/file_types/{{full_inputFileTypeId}}"
-              },
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"found\", () => pm.response.to.have.status(200));",
-                      "const tickets = pm.response.json().columns.find((column) => column.name === \"tickets\");",
-                      "pm.test(\"tickets column present\", () => pm.expect(tickets).to.exist);",
-                      "pm.collectionVariables.set(\"full_inputCol_tickets\", tickets.id);"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Add tickets <= group_size comparison",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": "{{baseUrl}}/validations",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"validation\": {\n    \"column_id\": {{full_inputCol_tickets}},\n    \"column_validator_id\": {{v_NumericComparison}},\n    \"input_json\": {\n      \"other_column\": \"group_size\",\n      \"operator\": \"<=\"\n    }\n  }\n}"
-                }
-              },
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test(\"created\", () => pm.response.to.have.status(201));"
                     ]
                   }
                 }

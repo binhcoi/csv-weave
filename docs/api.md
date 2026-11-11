@@ -282,7 +282,7 @@ For example, `POST /file_types` can create an email column and its required-valu
 }
 ```
 
-Use the ID of `RequiredValidator` from the catalog in place of `1`. All records in this request are created together; an invalid column or rule prevents the entire creation.
+Use the ID of `RequiredValidator` from the catalog in place of `1`. All records in this request are created together; an invalid column or rule prevents the entire creation. All columns are created before any rule, so a same-row comparison rule can reference a column listed later in the request.
 
 Create and update responses contain `id`, `name`, and `description`. List and individual reads also contain `columns`. For example, a destination format might return:
 
