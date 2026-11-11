@@ -29,19 +29,22 @@ namespace :e2e do
       .or(TransformMap.where(input_file_type: file_types)).or(TransformMap.where(output_file_type: file_types))
     data_files = DataFile.where(file_type: file_types)
 
-    counts = {}
+    counts = Hash.new(0)
     ConversionRun.where(transform_map: maps).or(ConversionRun.where(data_file: data_files)).find_each do |run|
       run.error_report.purge
       run.output.purge
-      counts["conversion runs"] = counts.fetch("conversion runs", 0) + run.destroy!.then { 1 }
+      run.destroy!
+      counts["conversion runs"] += 1
     end
     ValidationRun.where(file_type: file_types).or(ValidationRun.where(data_file: data_files)).find_each do |run|
       run.error_report.purge
-      counts["validation runs"] = counts.fetch("validation runs", 0) + run.destroy!.then { 1 }
+      run.destroy!
+      counts["validation runs"] += 1
     end
     data_files.find_each do |data_file|
       data_file.file.purge
-      counts["data files"] = counts.fetch("data files", 0) + data_file.destroy!.then { 1 }
+      data_file.destroy!
+      counts["data files"] += 1
     end
     counts["transform maps"] = maps.destroy_all.size
     counts["file types"] = file_types.destroy_all.size
