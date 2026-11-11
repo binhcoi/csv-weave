@@ -1,0 +1,6 @@
+order_ref,first,last,ordered_on,product_code,qty,unit_price
+TEST-1001,Testa,Fakeworth,12 Apr 2026,SKU-T042,2,19.95
+TEST-1002,Mocky,Dummington,03 May 2026,SKU-T107,3,4.50
+TEST-1003,Fakey,Testerson,28 Jun 2026,SKU-T005,1,8.00
+TEST-1004,Sampla,Mockridge,01 Jul 2026,SKU-T030,10,0.99
+TEST-1005,Dummy,"Placeholder, Jr.",15 Aug 2026,SKU-T999,4,125.00

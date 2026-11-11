@@ -1,0 +1,6 @@
+order_id,customer_name,order_date,sku,quantity,line_total
+TEST-1001,Testa Fakeworth,2026-04-12,T042,2,39.9
+TEST-1002,Mocky Dummington,2026-05-03,T107,3,13.5
+TEST-1003,Fakey Testerson,2026-06-28,T005,1,8.0
+TEST-1004,Sampla Mockridge,2026-07-01,T030,10,9.9
+TEST-1005,"Dummy Placeholder, Jr.",2026-08-15,T999,4,500.0

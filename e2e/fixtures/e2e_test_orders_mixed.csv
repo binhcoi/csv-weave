@@ -1,0 +1,9 @@
+order_ref,first,last,ordered_on,product_code,qty,unit_price
+TEST-2001,Testa,Fakeworth,12 Apr 2026,SKU-T042,2,19.95
+TEST-2002,Mocky,Dummington,31 Feb 2026,SKU-T107,3,4.50
+TEST-2003,Fakey,Testerson,28 Jun 2026,SKU-T005,0,8.00
+TEST-2004,Sampla,Mockridge,01 Jul 2026,BAD-T030,1,0.99
+,Dummy,Placeholder,15 Aug 2026,SKU-T999,4,125.00
+TEST-2006,Testo,Fakerson,20 Sep 2026,SKU-T321,two,5.00
+TEST-2007,Mocka,Shamwell,21 Sep 2026,SKU-T322,1
+TEST-2008,Fakey,Testerson,22 Sep 2026,SKU-T323,5,2.20

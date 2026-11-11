@@ -1,0 +1,3 @@
+order_id,customer_name,order_date,sku,quantity,line_total
+TEST-2001,Testa Fakeworth,2026-04-12,T042,2,39.9
+TEST-2008,Fakey Testerson,2026-09-22,T323,5,11.0

@@ -1,0 +1,4 @@
+{"record_number":3,"stage":"input_validation","column":"ordered_on","operation":"DateValidator","reason":"must be a valid date matching \"%d %b %Y\""}
+{"record_number":5,"stage":"input_validation","column":"product_code","operation":"RegexValidator","reason":"must match the configured pattern within its time limit"}
+{"record_number":6,"stage":"input_validation","column":"order_ref","operation":"RequiredValidator","reason":"must be present"}
+{"record_number":8,"stage":"row_shape","column":null,"operation":"CSV","reason":"expected 7 fields, got 6"}

@@ -35,6 +35,9 @@ rescue ActiveRecord::PendingMigrationError => e
   abort e.to_s.strip
 end
 RSpec.configure do |config|
+  # Slow end-to-end cases (large files) are skipped by default; run them with E2E_SLOW=1.
+  config.filter_run_excluding(slow: true) unless ENV["E2E_SLOW"]
+
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [
     Rails.root.join('spec/fixtures')
