@@ -1,4 +1,8 @@
-FROM ruby:4.0.9-slim-bookworm
+# Two targets:
+#   app (default) - Rails only.
+#   e2e           - app plus Node and Newman for running the Postman collection (bin/rails e2e:newman).
+#                   Build with: docker build -f Dockerfile.dev --target e2e .
+FROM ruby:4.0.9-slim-bookworm AS base
 
 ARG APP_UID=1000
 ARG APP_GID=1000
@@ -25,3 +29,15 @@ RUN BUNDLE_FROZEN=true bundle install
 EXPOSE 3000
 
 CMD ["bin/rails", "server", "-b", "0.0.0.0"]
+
+FROM base AS e2e
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends nodejs npm \
+    && npm install -g newman@6 \
+    && npm cache clean --force \
+    && rm -rf /var/lib/apt/lists/*
+USER app
+
+# Last stage is the default build target: no Node or Newman.
+FROM base AS app

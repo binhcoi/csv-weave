@@ -56,6 +56,7 @@ namespace :e2e do
     FileUtils.mkdir_p(reports)
     sh "newman", "run", collection,
        "--env-var", "baseUrl=#{ENV.fetch('E2E_BASE_URL', 'http://localhost:3000')}",
+       "--working-dir", File.expand_path("../fixtures", __dir__),
        "--reporters", "cli,junit", "--reporter-junit-export", File.join(reports, "newman.xml")
   end
 end

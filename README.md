@@ -128,6 +128,14 @@ bin/rubocop
 
 RSpec covers models, configuration APIs, individual processors, composition of saved processing rules, and the background validation and conversion runs. GitHub Actions also runs linting, autoloading checks, and security scans.
 
+End-to-end testing uses clearly fake `E2E-TEST` data. See [e2e/README.md](e2e/README.md) for fixtures, Postman, and Newman.
+
+```bash
+bin/rails e2e:seed     # create the E2E-TEST configuration
+bin/rails e2e:clean    # delete all E2E-TEST records and files
+bin/rails e2e:newman   # run the Postman collection (image built with --target e2e)
+```
+
 ## License
 
 Licensed under the [MIT License](LICENSE).

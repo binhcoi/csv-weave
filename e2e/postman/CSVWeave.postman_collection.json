@@ -1,0 +1,1064 @@
+{
+  "info": {
+    "name": "CSVWeave E2E",
+    "description": "End-to-end flow with E2E-TEST data. Run folders in order with the Collection Runner or `bin/rails e2e:newman`. Set the working directory to e2e/fixtures for uploads. See e2e/README.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 Setup",
+      "description": "Read the operation catalogs and create the E2E-TEST input/output file types and map through the API.",
+      "item": [
+        {
+          "name": "List validators",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/column_validators"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"catalog loaded\", () => pm.response.to.have.status(200));",
+                  "const wanted = [\"RequiredValidator\", \"DateValidator\", \"RegexValidator\", \"NumericRangeValidator\"];",
+                  "wanted.forEach((name) => {",
+                  "  const entry = pm.response.json().find((item) => item.processor_class === name);",
+                  "  pm.test(`${name} present`, () => pm.expect(entry).to.exist);",
+                  "  pm.collectionVariables.set(`v_${name.replace(\"Validator\", \"\")}`, entry.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List transformers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/column_transformers"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"catalog loaded\", () => pm.response.to.have.status(200));",
+                  "const wanted = [\"CopyTransformer\", \"ConcatenateTransformer\", \"DateParseTransformer\", \"SubstringTransformer\",",
+                  "                \"IntegerParseTransformer\", \"ArithmeticTransformer\"];",
+                  "wanted.forEach((name) => {",
+                  "  const entry = pm.response.json().find((item) => item.processor_class === name);",
+                  "  pm.test(`${name} present`, () => pm.expect(entry).to.exist);",
+                  "  pm.collectionVariables.set(`t_${name.replace(\"Transformer\", \"\")}`, entry.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create input file type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/file_types",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_type\": {\n    \"name\": \"E2E-TEST Postman supplier orders {{runTag}}\",\n    \"columns\": [\n      {\n        \"name\": \"order_ref\",\n        \"position\": 0,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Required}}\n          }\n        ]\n      },\n      {\n        \"name\": \"first\",\n        \"position\": 1\n      },\n      {\n        \"name\": \"last\",\n        \"position\": 2\n      },\n      {\n        \"name\": \"ordered_on\",\n        \"position\": 3,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Date}},\n            \"input_json\": {\n              \"format\": \"%d %b %Y\"\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"product_code\",\n        \"position\": 4,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_Regex}},\n            \"input_json\": {\n              \"pattern\": \"\\\\ASKU-\"\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"qty\",\n        \"position\": 5\n      },\n      {\n        \"name\": \"unit_price\",\n        \"position\": 6\n      }\n    ]\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"runTag\", new Date().toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"created\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"inputFileTypeId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create output file type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/file_types",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_type\": {\n    \"name\": \"E2E-TEST Postman warehouse orders {{runTag}}\",\n    \"columns\": [\n      {\n        \"name\": \"order_id\",\n        \"position\": 0\n      },\n      {\n        \"name\": \"customer_name\",\n        \"position\": 1\n      },\n      {\n        \"name\": \"order_date\",\n        \"position\": 2\n      },\n      {\n        \"name\": \"sku\",\n        \"position\": 3\n      },\n      {\n        \"name\": \"quantity\",\n        \"position\": 4,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_NumericRange}},\n            \"input_json\": {\n              \"min\": 1\n            }\n          }\n        ]\n      },\n      {\n        \"name\": \"line_total\",\n        \"position\": 5,\n        \"validations\": [\n          {\n            \"column_validator_id\": {{v_NumericRange}},\n            \"input_json\": {\n              \"min\": 0\n            }\n          }\n        ]\n      }\n    ]\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"created\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"outputFileTypeId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read output columns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/file_types/{{outputFileTypeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"found\", () => pm.response.to.have.status(200));",
+                  "const columns = pm.response.json().columns;",
+                  "pm.test(\"6 columns\", () => pm.expect(columns.length).to.eql(6));",
+                  "columns.forEach((column) => pm.collectionVariables.set(`col_${column.name}`, column.id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create transform map",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/transform_maps",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transform_map\": {\n    \"name\": \"E2E-TEST Postman supplier to warehouse {{runTag}}\",\n    \"input_file_type_id\": {{inputFileTypeId}},\n    \"output_file_type_id\": {{outputFileTypeId}},\n    \"transformations\": [\n      {\n        \"output_column_id\": {{col_order_id}},\n        \"column_transformer_id\": {{t_Copy}},\n        \"input_json\": {\n          \"source_column\": \"order_ref\"\n        }\n      },\n      {\n        \"output_column_id\": {{col_customer_name}},\n        \"column_transformer_id\": {{t_Concatenate}},\n        \"input_json\": {\n          \"source_columns\": [\n            \"first\",\n            \"last\"\n          ],\n          \"separator\": \" \"\n        }\n      },\n      {\n        \"output_column_id\": {{col_order_date}},\n        \"column_transformer_id\": {{t_DateParse}},\n        \"input_json\": {\n          \"source_column\": \"ordered_on\",\n          \"format\": \"%d %b %Y\",\n          \"output_format\": \"%Y-%m-%d\"\n        }\n      },\n      {\n        \"output_column_id\": {{col_sku}},\n        \"column_transformer_id\": {{t_Substring}},\n        \"input_json\": {\n          \"source_column\": \"product_code\",\n          \"start\": 4,\n          \"length\": 20\n        }\n      },\n      {\n        \"output_column_id\": {{col_quantity}},\n        \"column_transformer_id\": {{t_IntegerParse}},\n        \"input_json\": {\n          \"source_column\": \"qty\"\n        }\n      },\n      {\n        \"output_column_id\": {{col_line_total}},\n        \"column_transformer_id\": {{t_Arithmetic}},\n        \"input_json\": {\n          \"source_columns\": [\n            \"qty\",\n            \"unit_price\"\n          ],\n          \"operator\": \"*\"\n        }\n      }\n    ]\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"created\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"transformMapId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 Upload",
+      "description": "Upload the fixture CSVs from e2e/fixtures as the input file type.",
+      "item": [
+        {
+          "name": "Upload valid orders",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/data_files",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data_file[file_type_id]",
+                  "value": "{{inputFileTypeId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "data_file[file]",
+                  "src": "e2e_test_orders_valid.csv",
+                  "type": "file"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"uploaded\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"validFileId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload mixed orders",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/data_files",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data_file[file_type_id]",
+                  "value": "{{inputFileTypeId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "data_file[file]",
+                  "src": "e2e_test_orders_mixed.csv",
+                  "type": "file"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"uploaded\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"mixedFileId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload bad-header orders",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/data_files",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data_file[file_type_id]",
+                  "value": "{{inputFileTypeId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "data_file[file]",
+                  "src": "e2e_test_orders_bad_header.csv",
+                  "type": "file"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"uploaded\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"badHeaderFileId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload Latin-1 orders",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/data_files",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data_file[file_type_id]",
+                  "value": "{{inputFileTypeId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "data_file[file]",
+                  "src": "e2e_test_orders_latin1.csv",
+                  "type": "file"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"uploaded\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"latin1FileId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Validate",
+      "description": "Validate uploads, poll until finished, and check counts and error reports.",
+      "item": [
+        {
+          "name": "Validate valid orders",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/data_files/{{validFileId}}/validate"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"run started or reused\", () => pm.expect(pm.response.code).to.be.oneOf([200, 202]));",
+                  "pm.collectionVariables.set(\"validValidationRunId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Poll valid validation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/validation_runs/{{validValidationRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const attempts = Number(pm.collectionVariables.get(\"pollAttempts\") || 0);",
+                  "if ([\"queued\", \"running\"].includes(body.status) && attempts < 30) {",
+                  "  pm.collectionVariables.set(\"pollAttempts\", attempts + 1);",
+                  "  setTimeout(() => {}, 1000);",
+                  "  postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.collectionVariables.set(\"pollAttempts\", 0);",
+                  "  pm.test(\"run finished within 30 polls\", () => pm.expect(body.status).to.be.oneOf([\"succeeded\", \"rejected\", \"failed\"]));",
+                  "",
+                  "  pm.test(\"status succeeded, counts 5/0/0\", () => {",
+                  "    pm.expect(body.status).to.eql(\"succeeded\");",
+                  "    pm.expect([body.accepted_rows, body.rejected_rows, body.error_count]).to.eql([5, 0, 0]);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download valid validation errors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/validation_runs/{{validValidationRunId}}/error_report"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"downloaded\", () => pm.response.to.have.status(200));",
+                  "const lines = pm.response.text().split(\"\\n\").filter((line) => line.length > 0);",
+                  "pm.test(\"0 error line(s)\", () => pm.expect(lines.length).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validate mixed orders",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/data_files/{{mixedFileId}}/validate"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"run started or reused\", () => pm.expect(pm.response.code).to.be.oneOf([200, 202]));",
+                  "pm.collectionVariables.set(\"mixedValidationRunId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Poll mixed validation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/validation_runs/{{mixedValidationRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const attempts = Number(pm.collectionVariables.get(\"pollAttempts\") || 0);",
+                  "if ([\"queued\", \"running\"].includes(body.status) && attempts < 30) {",
+                  "  pm.collectionVariables.set(\"pollAttempts\", attempts + 1);",
+                  "  setTimeout(() => {}, 1000);",
+                  "  postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.collectionVariables.set(\"pollAttempts\", 0);",
+                  "  pm.test(\"run finished within 30 polls\", () => pm.expect(body.status).to.be.oneOf([\"succeeded\", \"rejected\", \"failed\"]));",
+                  "",
+                  "  pm.test(\"status succeeded, counts 4/4/4\", () => {",
+                  "    pm.expect(body.status).to.eql(\"succeeded\");",
+                  "    pm.expect([body.accepted_rows, body.rejected_rows, body.error_count]).to.eql([4, 4, 4]);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download mixed validation errors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/validation_runs/{{mixedValidationRunId}}/error_report"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"downloaded\", () => pm.response.to.have.status(200));",
+                  "const lines = pm.response.text().split(\"\\n\").filter((line) => line.length > 0);",
+                  "pm.test(\"4 error line(s)\", () => pm.expect(lines.length).to.eql(4));",
+                  "pm.test(\"errors per stage\", () => pm.expect(lines.map((line) => JSON.parse(line).stage)).to.eql([\"input_validation\", \"input_validation\", \"input_validation\", \"row_shape\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validate Latin-1 orders",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/data_files/{{latin1FileId}}/validate"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"run started or reused\", () => pm.expect(pm.response.code).to.be.oneOf([200, 202]));",
+                  "pm.collectionVariables.set(\"latin1ValidationRunId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Poll Latin-1 validation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/validation_runs/{{latin1ValidationRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const attempts = Number(pm.collectionVariables.get(\"pollAttempts\") || 0);",
+                  "if ([\"queued\", \"running\"].includes(body.status) && attempts < 30) {",
+                  "  pm.collectionVariables.set(\"pollAttempts\", attempts + 1);",
+                  "  setTimeout(() => {}, 1000);",
+                  "  postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.collectionVariables.set(\"pollAttempts\", 0);",
+                  "  pm.test(\"run finished within 30 polls\", () => pm.expect(body.status).to.be.oneOf([\"succeeded\", \"rejected\", \"failed\"]));",
+                  "",
+                  "  pm.test(\"rejected as invalid UTF-8\", () => {",
+                  "    pm.expect(body.status).to.eql(\"rejected\");",
+                  "    pm.expect(body.failure_reason).to.eql(\"input contains invalid UTF-8\");",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download Latin-1 validation errors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/validation_runs/{{latin1ValidationRunId}}/error_report"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"downloaded\", () => pm.response.to.have.status(200));",
+                  "const lines = pm.response.text().split(\"\\n\").filter((line) => line.length > 0);",
+                  "pm.test(\"1 error line(s)\", () => pm.expect(lines.length).to.eql(1));",
+                  "pm.test(\"errors per stage\", () => pm.expect(lines.map((line) => JSON.parse(line).stage)).to.eql([\"encoding\"]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 Convert",
+      "description": "Convert uploads with the map, poll, and check outputs and error reports.",
+      "item": [
+        {
+          "name": "Convert valid orders",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/data_files/{{validFileId}}/convert",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversion_run\": {\n    \"transform_map_id\": {{transformMapId}}\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"run started or reused\", () => pm.expect(pm.response.code).to.be.oneOf([200, 202]));",
+                  "pm.collectionVariables.set(\"validConversionRunId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Poll valid conversion",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/conversion_runs/{{validConversionRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const attempts = Number(pm.collectionVariables.get(\"pollAttempts\") || 0);",
+                  "if ([\"queued\", \"running\"].includes(body.status) && attempts < 30) {",
+                  "  pm.collectionVariables.set(\"pollAttempts\", attempts + 1);",
+                  "  setTimeout(() => {}, 1000);",
+                  "  postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.collectionVariables.set(\"pollAttempts\", 0);",
+                  "  pm.test(\"run finished within 30 polls\", () => pm.expect(body.status).to.be.oneOf([\"succeeded\", \"rejected\", \"failed\"]));",
+                  "",
+                  "  pm.test(\"status succeeded, counts 5/0/0\", () => {",
+                  "    pm.expect(body.status).to.eql(\"succeeded\");",
+                  "    pm.expect([body.accepted_rows, body.rejected_rows, body.error_count]).to.eql([5, 0, 0]);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download valid output",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/conversion_runs/{{validConversionRunId}}/output"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"downloaded\", () => pm.response.to.have.status(200));",
+                  "const lines = pm.response.text().trim().split(\"\\n\");",
+                  "pm.test(\"output header\", () => pm.expect(lines[0]).to.eql(\"order_id,customer_name,order_date,sku,quantity,line_total\"));",
+                  "pm.test(\"5 converted row(s)\", () => pm.expect(lines.length - 1).to.eql(5));",
+                  "pm.test(\"first row converted\", () => pm.expect(lines[1]).to.eql(\"TEST-1001,Testa Fakeworth,2026-04-12,T042,2,39.9\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download valid conversion errors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/conversion_runs/{{validConversionRunId}}/error_report"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"downloaded\", () => pm.response.to.have.status(200));",
+                  "const lines = pm.response.text().split(\"\\n\").filter((line) => line.length > 0);",
+                  "pm.test(\"0 error line(s)\", () => pm.expect(lines.length).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Convert mixed orders",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/data_files/{{mixedFileId}}/convert",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversion_run\": {\n    \"transform_map_id\": {{transformMapId}}\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"run started or reused\", () => pm.expect(pm.response.code).to.be.oneOf([200, 202]));",
+                  "pm.collectionVariables.set(\"mixedConversionRunId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Poll mixed conversion",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/conversion_runs/{{mixedConversionRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const attempts = Number(pm.collectionVariables.get(\"pollAttempts\") || 0);",
+                  "if ([\"queued\", \"running\"].includes(body.status) && attempts < 30) {",
+                  "  pm.collectionVariables.set(\"pollAttempts\", attempts + 1);",
+                  "  setTimeout(() => {}, 1000);",
+                  "  postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.collectionVariables.set(\"pollAttempts\", 0);",
+                  "  pm.test(\"run finished within 30 polls\", () => pm.expect(body.status).to.be.oneOf([\"succeeded\", \"rejected\", \"failed\"]));",
+                  "",
+                  "  pm.test(\"status succeeded, counts 2/6/7\", () => {",
+                  "    pm.expect(body.status).to.eql(\"succeeded\");",
+                  "    pm.expect([body.accepted_rows, body.rejected_rows, body.error_count]).to.eql([2, 6, 7]);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download mixed output",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/conversion_runs/{{mixedConversionRunId}}/output"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"downloaded\", () => pm.response.to.have.status(200));",
+                  "const lines = pm.response.text().trim().split(\"\\n\");",
+                  "pm.test(\"output header\", () => pm.expect(lines[0]).to.eql(\"order_id,customer_name,order_date,sku,quantity,line_total\"));",
+                  "pm.test(\"2 converted row(s)\", () => pm.expect(lines.length - 1).to.eql(2));",
+                  "pm.test(\"first row converted\", () => pm.expect(lines[1]).to.eql(\"TEST-2001,Testa Fakeworth,2026-04-12,T042,2,39.9\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download mixed conversion errors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/conversion_runs/{{mixedConversionRunId}}/error_report"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"downloaded\", () => pm.response.to.have.status(200));",
+                  "const lines = pm.response.text().split(\"\\n\").filter((line) => line.length > 0);",
+                  "pm.test(\"7 error line(s)\", () => pm.expect(lines.length).to.eql(7));",
+                  "pm.test(\"errors per stage\", () => pm.expect(lines.map((line) => JSON.parse(line).stage)).to.eql([\"input_validation\", \"output_validation\", \"input_validation\", \"input_validation\", \"transformation\", \"transformation\", \"row_shape\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Convert bad-header orders",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/data_files/{{badHeaderFileId}}/convert",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversion_run\": {\n    \"transform_map_id\": {{transformMapId}}\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"run started or reused\", () => pm.expect(pm.response.code).to.be.oneOf([200, 202]));",
+                  "pm.collectionVariables.set(\"badHeaderConversionRunId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Poll bad-header conversion",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/conversion_runs/{{badHeaderConversionRunId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const attempts = Number(pm.collectionVariables.get(\"pollAttempts\") || 0);",
+                  "if ([\"queued\", \"running\"].includes(body.status) && attempts < 30) {",
+                  "  pm.collectionVariables.set(\"pollAttempts\", attempts + 1);",
+                  "  setTimeout(() => {}, 1000);",
+                  "  postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.collectionVariables.set(\"pollAttempts\", 0);",
+                  "  pm.test(\"run finished within 30 polls\", () => pm.expect(body.status).to.be.oneOf([\"succeeded\", \"rejected\", \"failed\"]));",
+                  "",
+                  "  pm.test(\"rejected for the missing header, without output\", () => {",
+                  "    pm.expect(body.status).to.eql(\"rejected\");",
+                  "    pm.expect(body.failure_reason).to.eql('missing headers: \"unit_price\"');",
+                  "    pm.expect(body.output_url).to.eql(null);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bad-header output is not available",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/conversion_runs/{{badHeaderConversionRunId}}/output"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 for a rejected run's output\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download bad-header conversion errors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/conversion_runs/{{badHeaderConversionRunId}}/error_report"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"downloaded\", () => pm.response.to.have.status(200));",
+                  "const lines = pm.response.text().split(\"\\n\").filter((line) => line.length > 0);",
+                  "pm.test(\"1 error line(s)\", () => pm.expect(lines.length).to.eql(1));",
+                  "pm.test(\"errors per stage\", () => pm.expect(lines.map((line) => JSON.parse(line).stage)).to.eql([\"headers\"]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 Edge cases",
+      "description": "Run reuse, file-type mismatch, and unknown IDs.",
+      "item": [
+        {
+          "name": "Reuse finished validation run",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/data_files/{{validFileId}}/validate"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 with the same run\", () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get(\"validValidationRunId\")));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reuse finished conversion run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/data_files/{{validFileId}}/convert",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversion_run\": {\n    \"transform_map_id\": {{transformMapId}}\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 with the same run\", () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get(\"validConversionRunId\")));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload valid orders as the output file type",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/data_files",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data_file[file_type_id]",
+                  "value": "{{outputFileTypeId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "data_file[file]",
+                  "src": "e2e_test_orders_valid.csv",
+                  "type": "file"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"uploaded\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"mismatchFileId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Convert with a mismatched file type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/data_files/{{mismatchFileId}}/convert",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversion_run\": {\n    \"transform_map_id\": {{transformMapId}}\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 with a rejected run\", () => {",
+                  "  pm.response.to.have.status(422);",
+                  "  pm.expect(pm.response.json().status).to.eql(\"rejected\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validate an unknown data file",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/data_files/999999999/validate"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Convert with an unknown map",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/data_files/{{validFileId}}/convert",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversion_run\": {\n    \"transform_map_id\": 999999999\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 with a transform_map error\", () => {",
+                  "  pm.response.to.have.status(422);",
+                  "  pm.expect(pm.response.json().errors).to.have.property(\"transform_map\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
