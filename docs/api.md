@@ -2,7 +2,7 @@
 
 The API manages CSV file formats, column rules, transformation maps, and stored data files. Files can be uploaded, inspected, and downloaded. Stored files can be validated against their file type or converted with a transformation map; both operations run in the background.
 
-Start the application using the [README setup instructions](../README.md#run-locally). The local base URL is `http://localhost:3000`; in a Docker development container, use the host port from that container's `.env` (`APP_PORT`).
+Start the application using the [README setup instructions](../README.md#run-locally). The local base URL is `http://localhost:3000`; in a Docker development container, use the host port from that container's `.env` (`API_PORT`).
 
 [Data files](#data-files) · [Validation runs](#validation-runs) · [Conversion runs](#conversion-runs) · [File types](#file-types) · [Columns](#columns) · [Validations](#validation-rules) · [Maps](#transformation-maps) · [Transformations](#transformation-rules) · [Catalogs](#operation-catalogs) · [Bulk edits](#bulk-edits) · [Errors](#errors)
 

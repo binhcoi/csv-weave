@@ -74,11 +74,34 @@ Configurations are stored in PostgreSQL and managed through a REST API. Changing
 
 ### Extending the operations
 
-Validators and transformers are plain Ruby classes under [`app/processors/`](app/processors). The database catalogs describe the available operations and their configuration schemas. An explicit allowlist controls which processor classes those catalog entries may resolve to.
+Validators and transformers are plain Ruby classes under [`backend/app/processors/`](backend/app/processors). The database catalogs describe the available operations and their configuration schemas. An explicit allowlist controls which processor classes those catalog entries may resolve to.
 
 The initial operation set covers required fields, string and numeric validation, regular expressions, date validation, same-row comparisons, copying, concatenation, formatting, substrings, date and number parsing, and arithmetic. Operation parameters are checked against JSON Schema and processor-specific configuration rules when configurations are saved.
 
 See [Validator reference](docs/validator.md), [Transformer reference](docs/transformer.md), and [Configuration schemas](docs/input_schemas.md) for supported settings and examples.
+
+## Repository layout
+
+| Path | Contents |
+| --- | --- |
+| `backend/` | The Rails API application. |
+| `e2e/` | End-to-end suite: fixtures, seeding tasks, and the Postman collection. Covers the whole app. |
+| `docs/` | Reference documentation. |
+| `bin/` | Convenience wrappers that run from anywhere in the repository. |
+
+Anything scoped to the whole application lives at the repository root; anything
+belonging to one application lives in its folder.
+
+The wrappers mean no command needs a particular working directory:
+
+| Command | Does |
+| --- | --- |
+| `bin/setup` | Install dependencies and prepare the database. Safe to re-run. |
+| `bin/dev` | Start the development server. |
+| `bin/test` | Run every suite. `bin/test backend` or `bin/test e2e` runs one. |
+| `bin/lint` | Run linters. |
+| `bin/rails` | Run a Rails command in `backend/`. |
+| `bin/e2e` | `seed`, `clean`, or `newman`. |
 
 ## Run locally
 
@@ -86,15 +109,14 @@ Requires Ruby 4.0.9, PostgreSQL, and Bundler 4.0.11.
 
 ```bash
 gem install bundler -v 4.0.11
-bundle install
 
 # Set these to match your local PostgreSQL instance.
 export DB_HOST=127.0.0.1
 export DB_USER=postgres
 export DB_PASSWORD=postgres
 
-bin/rails db:prepare
-SOLID_QUEUE_IN_PUMA=1 bin/rails server
+bin/setup
+SOLID_QUEUE_IN_PUMA=1 bin/dev
 ```
 
 The configuration API runs at `http://localhost:3000`. Database preparation seeds the catalogs of supported validators and transformers and creates the Solid Queue database. `SOLID_QUEUE_IN_PUMA=1` runs the background worker for validation and conversion runs inside the server.
@@ -121,9 +143,9 @@ The [API reference](docs/api.md) covers attaching validation rules, creating des
 Run tests and quality checks with:
 
 ```bash
-RAILS_ENV=test bin/rails db:test:prepare
-CI=true RAILS_ENV=test bundle exec rspec
-bin/rubocop
+bin/test          # every suite
+bin/test backend  # RSpec, preparing the test database first
+bin/lint
 ```
 
 RSpec covers models, configuration APIs, individual processors, composition of saved processing rules, the background validation and conversion runs, and end-to-end API flows using the e2e fixtures. GitHub Actions also runs linting, autoloading checks, and security scans.
@@ -131,9 +153,9 @@ RSpec covers models, configuration APIs, individual processors, composition of s
 End-to-end testing uses clearly fake `E2E-TEST` data. See [e2e/README.md](e2e/README.md) for fixtures, Postman, and Newman.
 
 ```bash
-bin/rails e2e:seed     # create the E2E-TEST configuration
-bin/rails e2e:clean    # delete all E2E-TEST records and files
-bin/rails e2e:newman   # run the Postman collection (image built with --target e2e)
+bin/e2e seed     # create the E2E-TEST configuration
+bin/e2e clean    # delete all E2E-TEST records and files
+bin/e2e newman   # run the Postman collection (image built with --target e2e)
 ```
 
 ## License

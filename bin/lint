@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Run linters from anywhere in the repository. Extra arguments go to RuboCop.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export BUNDLE_GEMFILE="$ROOT/backend/Gemfile"
+
+echo "== rubocop =="
+(
+  cd "$ROOT/backend"
+  exec bin/rubocop "$@"
+)

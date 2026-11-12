@@ -56,18 +56,21 @@ Run tasks inside the worktree's own container. The tasks refuse to run in produc
 
 | Task | What it does |
 | --- | --- |
-| `bin/rails e2e:seed` | Creates both E2E-TEST scenario configurations (idempotent) and prints their IDs. Requires the catalogs (`bin/rails db:seed`). |
-| `bin/rails e2e:clean` | Deletes every `E2E-TEST` file type and map, plus their data files, runs, and stored files. |
-| `bin/rails e2e:newman` | Runs the Postman collection against `http://localhost:3000` (this container's server) and writes `reports/newman.xml`. `FOLDER=Basic` runs one folder. |
+| `bin/e2e seed` | Creates both E2E-TEST scenario configurations (idempotent) and prints their IDs. Requires the catalogs (`bin/rails db:seed`). |
+| `bin/e2e clean` | Deletes every `E2E-TEST` file type and map, plus their data files, runs, and stored files. |
+| `bin/e2e newman` | Runs the Postman collection against `http://localhost:3000` (this container's server) and writes `reports/newman.xml`. `FOLDER=Basic` runs one folder. |
 
 Use the development environment (the container default). The test database belongs to RSpec;
 leftover E2E-TEST rows there make the suite fail.
 
 ## RSpec
 
+The specs live in `backend/spec/e2e` and resolve this directory through `E2E_ROOT`,
+defined in `backend/spec/rails_helper.rb`.
+
 ```bash
-CI=true RAILS_ENV=test bundle exec rspec spec/e2e              # about 4 seconds
-CI=true RAILS_ENV=test E2E_SLOW=1 bundle exec rspec spec/e2e   # adds the 3000-row case
+bin/test backend spec/e2e              # about 4 seconds
+E2E_SLOW=1 bin/test backend spec/e2e   # adds the 3000-row case
 ```
 
 ## Postman and Newman
@@ -106,15 +109,15 @@ exports from the Postman app, are overwritten on the next run.
 (`docker build -f Dockerfile.dev --target e2e ...`). The default target has no Node or Newman.
 
 ```bash
-docker exec <container> bin/rails e2e:newman                       # whole collection
-docker exec <container> bin/rails e2e:newman FOLDER=Comprehensive  # one folder
+docker exec <container> bin/e2e newman                       # whole collection
+docker exec <container> bin/e2e newman FOLDER=Comprehensive  # one folder
 ```
 
 **Postman app:**
 
 1. Import `postman/CSVWeave.postman_collection.json` and `postman/environments/local.postman_environment.json`.
-2. In the environment, set `baseUrl` to `http://localhost:<APP_PORT>` from the worktree's `.env`.
+2. In the environment, set `baseUrl` to `http://localhost:<API_PORT>` from the worktree's `.env`.
 3. In Postman settings, set the working directory to this repository's `e2e/fixtures` folder so the uploads find their files.
 4. Run the collection with the Collection Runner.
 
-Afterwards, `bin/rails e2e:clean` removes everything the collection created.
+Afterwards, `bin/e2e clean` removes everything the collection created.

@@ -1,13 +1,13 @@
 require "rails_helper"
 require "csv"
-require Rails.root.join("e2e/support/configuration_seeder")
+require E2E_ROOT.join("support/configuration_seeder")
 
 # Drives the e2e fixture CSVs through the real API: upload, validate, convert, check status, and
 # download outputs, comparing them with e2e/fixtures/expected. Postman runs the same flow manually.
 RSpec.describe "End-to-end file processing", type: :request do
   include ActiveJob::TestHelper
 
-  let(:fixtures) { Rails.root.join("e2e/fixtures/basic") }
+  let(:fixtures) { E2E_ROOT.join("fixtures/basic") }
   let(:configuration) do
     Rails.application.load_seed
     E2e::ConfigurationSeeder.seed!(:basic)
@@ -131,7 +131,7 @@ RSpec.describe "End-to-end file processing", type: :request do
       Rails.application.load_seed
       E2e::ConfigurationSeeder.seed!(:comprehensive)
     end
-    let(:fixtures) { Rails.root.join("e2e/fixtures/comprehensive") }
+    let(:fixtures) { E2E_ROOT.join("fixtures/comprehensive") }
 
     it "validates and converts registrations using every cataloged operation" do
       data_file_id = upload("e2e_test_registrations_valid.csv", file_type: comprehensive.input_file_type)

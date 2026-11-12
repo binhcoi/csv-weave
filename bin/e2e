@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# End-to-end helpers. The suite covers the whole app and lives in e2e/ at the repository root.
+#
+#   bin/e2e seed     create the E2E-TEST configuration
+#   bin/e2e clean    delete all E2E-TEST records and files
+#   bin/e2e newman   run the Postman collection (FOLDER=Basic runs one folder)
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+task="${1:-}"
+case "$task" in
+  seed | clean | newman)
+    shift
+    ;;
+  "" | -h | --help)
+    sed -n '2,7p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    exit 0
+    ;;
+  *)
+    echo "bin/e2e: unknown task '$task' (expected seed, clean, or newman)" >&2
+    exit 1
+    ;;
+esac
+
+exec "$ROOT/bin/rails" "e2e:$task" "$@"

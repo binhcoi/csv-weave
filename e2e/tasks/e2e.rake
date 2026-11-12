@@ -10,7 +10,7 @@ namespace :e2e do
   desc "Create the #{E2E_PREFIX} file types, validations, and transformation map"
   task seed: :environment do
     refuse_in_production!
-    require Rails.root.join("e2e/support/configuration_seeder")
+    require File.expand_path("../support/configuration_seeder", __dir__)
 
     E2e::ConfigurationSeeder.seed_all!.each do |scenario, configuration|
       puts "#{scenario}:"

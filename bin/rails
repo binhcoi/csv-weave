@@ -1,4 +1,9 @@
-#!/usr/bin/env ruby
-APP_PATH = File.expand_path("../config/application", __dir__)
-require_relative "../config/boot"
-require "rails/commands"
+#!/usr/bin/env bash
+# Run a Rails command in backend/ from anywhere in the repository.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export BUNDLE_GEMFILE="$ROOT/backend/Gemfile"
+
+cd "$ROOT/backend"
+exec bin/rails "$@"

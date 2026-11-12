@@ -38,7 +38,7 @@ CSVWeave is a Ruby on Rails application for defining CSV formats, validating the
 
 **Outcome:** Users can upload a CSV, validate it independently, convert it with a saved map, and retrieve the results through the API.
 
-## Planned: Web interface
+## In progress
 
 The next major phase is a browser-based interface for creating configurations and running CSV operations without manually constructing API requests.
 
@@ -46,10 +46,12 @@ The next major phase is a browser-based interface for creating configurations an
 
 ### 1. UI foundation (4–6 hours)
 
-- [ ] Choose and integrate a frontend approach with the Rails API.
+- [ ] Choose and integrate a frontend approach with the Rails API. React with TypeScript on Vite, in a separate frontend folder; see [UI.md](UI.md).
 - [ ] Add navigation and shared components for forms, loading states, and API errors.
 
 **Outcome:** A usable application shell connected to the backend.
+
+## Planned: Web interface
 
 ### 2. File type and validation editor (8–10 hours)
 

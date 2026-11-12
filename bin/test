@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Run test suites from anywhere in the repository.
+#
+#   bin/test            run every suite
+#   bin/test backend    RSpec, preparing the test database first
+#   bin/test e2e        the Postman collection through Newman
+#
+# Extra arguments go to the chosen suite, e.g. bin/test backend spec/models
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export BUNDLE_GEMFILE="$ROOT/backend/Gemfile"
+
+run_backend() {
+  echo "== backend specs =="
+  (
+    cd "$ROOT/backend"
+    RAILS_ENV=test bin/rails db:test:prepare
+    CI=true RAILS_ENV=test bundle exec rspec "$@"
+  )
+}
+
+run_e2e() {
+  echo "== e2e collection =="
+  "$ROOT/bin/e2e" newman "$@"
+}
+
+target="${1:-all}"
+case "$target" in
+  backend)
+    shift
+    run_backend "$@"
+    ;;
+  e2e)
+    shift
+    run_e2e "$@"
+    ;;
+  all)
+    shift
+    run_backend
+    run_e2e
+    ;;
+  -h | --help)
+    sed -n '2,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    exit 0
+    ;;
+  *)
+    echo "bin/test: unknown suite '$target' (expected backend, e2e, or all)" >&2
+    exit 1
+    ;;
+esac

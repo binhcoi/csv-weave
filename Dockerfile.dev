@@ -14,21 +14,24 @@ RUN apt-get update \
 
 RUN groupadd --gid "$APP_GID" app \
     && useradd --uid "$APP_UID" --gid app --create-home app \
-    && mkdir -p /app \
+    && mkdir -p /app/backend \
     && chown -R app:app /app /usr/local/bundle
 
 ENV HOME=/home/app
+# /app/bin holds the repository-root wrappers, which work from any directory.
 ENV PATH="/app/bin:${PATH}"
+# Let bundler find the backend Gemfile regardless of the working directory.
+ENV BUNDLE_GEMFILE=/app/backend/Gemfile
 
 WORKDIR /app
 USER app
 
-COPY --chown=app:app Gemfile Gemfile.lock ./
+COPY --chown=app:app backend/Gemfile backend/Gemfile.lock /app/backend/
 RUN BUNDLE_FROZEN=true bundle install
 
 EXPOSE 3000
 
-CMD ["bin/rails", "server", "-b", "0.0.0.0"]
+CMD ["bin/dev"]
 
 FROM base AS e2e
 USER root

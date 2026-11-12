@@ -1,5 +1,5 @@
 require "rails_helper"
-require Rails.root.join("e2e/support/configuration_seeder")
+require E2E_ROOT.join("support/configuration_seeder")
 
 RSpec.describe E2e::ConfigurationSeeder do
   SCENARIO_FIXTURES = {
@@ -55,7 +55,7 @@ RSpec.describe E2e::ConfigurationSeeder do
         configuration = described_class.seed!(scenario)
         conversion = ConversionConfigurationLoader.load(configuration.transform_map.id)
         validation = FileTypeConfigurationLoader.load(configuration.input_file_type.id)
-        dir = Rails.root.join("e2e/fixtures/#{scenario}")
+        dir = E2E_ROOT.join("fixtures/#{scenario}")
         source = dir.join("e2e_test_#{prefix}_#{name}.csv")
         expected = dir.join("expected")
 
