@@ -57,6 +57,8 @@
 /frontend/*.sln
 /frontend/*.sw?
 
+# Newman reports; bin/e2e newman recreates the folder.
+/e2e/reports/
 
 # Stray caches written at the repository root by a process whose working
 # directory was not backend/.
