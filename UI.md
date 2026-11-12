@@ -56,7 +56,7 @@ The interface uses the API's vocabulary:
 
 ## Screens
 
-Three areas, reached from a shared navigation shell:
+Three working areas and a help page, reached from a shared navigation shell:
 
 - **File types.** A list of file types and an editor for one: its ordered
   columns, the validation rules on each column, and each rule's settings.
@@ -66,6 +66,9 @@ Three areas, reached from a shared navigation shell:
 - **Files and runs.** Upload a CSV for a file type, start a validation or a
   conversion with a compatible map, follow its progress, and download the
   converted file or the rejection report.
+- **Help.** Static content explaining the concepts above and the typical
+  workflow. Built first, with the navigation shell, because it needs no API
+  calls.
 
 ## Design principles
 

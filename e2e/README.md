@@ -106,7 +106,7 @@ a fixture, an expected file, or a scenario. The script's scenario definitions mi
 exports from the Postman app, are overwritten on the next run.
 
 **Newman (command line):** requires the image built with the `e2e` target
-(`docker build -f Dockerfile.dev --target e2e ...`). The default target has no Node or Newman.
+(`docker build -f Dockerfile.dev --target e2e ...`). The default target has Node but not Newman.
 
 ```bash
 docker exec <container> bin/e2e newman                       # whole collection

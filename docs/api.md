@@ -167,7 +167,8 @@ again to use the new configuration.
 Runs are never retried automatically. A run whose worker stops responding for
 15 minutes, that has been running for more than 12 hours, or that has not started within 24 hours, is marked `failed`
 (`worker stopped responding`, `run exceeded 12 hours`, or `job did not start within 24 hours`), and the
-next request starts a new run.
+next request starts a new run. The check runs every 10 minutes, so a run is marked `failed` up to
+10 minutes after it qualifies.
 
 ### Error report
 
@@ -240,7 +241,7 @@ error report and discards any partial output.
 
 Runs are processed by Solid Queue. In development, set `SOLID_QUEUE_IN_PUMA=1`
 to run the worker inside the Rails server; otherwise runs stay `queued` until a
-worker (`bin/jobs`) starts.
+worker (`backend/bin/jobs`) starts.
 
 ## File types
 

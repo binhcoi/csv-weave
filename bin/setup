@@ -6,6 +6,13 @@
 # dependency changes.
 set -euo pipefail
 
+case "${1:-}" in
+  -h | --help)
+    sed -n '2,6p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    exit 0
+    ;;
+esac
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export BUNDLE_GEMFILE="$ROOT/backend/Gemfile"
 

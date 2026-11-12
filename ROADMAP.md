@@ -48,8 +48,9 @@ The next major phase is a browser-based interface for creating configurations an
 
 - [x] Choose a frontend approach: React and TypeScript on Vite in `frontend/`, beside the Rails API in `backend/`. See [UI.md](UI.md) for the design.
 - [x] Scaffold the frontend with linting, formatting, unit tests, and CI, and run it beside the API in the development container.
+- [ ] Build the application shell: site navigation, layout, and visual style, with a static help page as its first content. The help page needs no API calls, so look and feel can be settled without data-fetching complexity.
 - [ ] Connect the frontend to the Rails API.
-- [ ] Add navigation and shared components for forms, loading states, and API errors.
+- [ ] Add shared components for forms, loading states, and API errors.
 
 **Outcome:** A usable application shell connected to the backend.
 

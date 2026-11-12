@@ -18,6 +18,10 @@ case "${1:-}" in
     ;;
 esac
 
+# Resolve Ruby tools from backend/, where .ruby-version lives. A version manager such as rbenv then
+# selects the backend's Ruby for foreman, and its processes inherit that choice.
+cd "$ROOT/backend"
+
 if ! command -v foreman >/dev/null; then
   echo "== installing foreman =="
   gem install foreman

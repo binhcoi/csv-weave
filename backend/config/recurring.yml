@@ -12,7 +12,8 @@
 shared: &shared
   recover_stale_runs:
     class: RecoverStaleRunsJob
-    schedule: every minute
+    # Well under ProcessingRun::STALE_AFTER, so a dead run is failed within 15-25 minutes.
+    schedule: every 10 minutes
 
 development:
   <<: *shared
