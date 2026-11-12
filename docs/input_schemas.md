@@ -51,7 +51,7 @@ object. See [API errors](api.md#errors) for response examples.
 ## Maintaining operation schemas
 
 Catalog schemas use JSON Schema through `json_schemer` and are maintained in
-[db/seeds.rb](../db/seeds.rb). Catalogs are read-only through the API.
+[backend/db/seeds.rb](../backend/db/seeds.rb). Catalogs are read-only through the API.
 After schema validation succeeds, the rule calls its processor's
 `validate_configuration` hook for checks that depend on other settings or saved
 records. Invalid schema documents are rejected on the catalog's `input_schema`

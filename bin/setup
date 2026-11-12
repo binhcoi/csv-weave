@@ -2,7 +2,8 @@
 # Prepare the development environment. Safe to re-run.
 #
 # In a worktree container, run this once before the first start so the
-# container's own database exists and is migrated.
+# container's own database exists and is migrated, and after pulling
+# dependency changes.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -12,6 +13,14 @@ echo "== installing backend dependencies =="
 (
   cd "$ROOT/backend"
   bundle check || bundle install
+)
+
+echo "== installing frontend dependencies =="
+# Installed here rather than in the image: the source bind mount shadows any
+# node_modules baked into it.
+(
+  cd "$ROOT/frontend"
+  npm ci --no-audit --no-fund
 )
 
 echo "== preparing database =="

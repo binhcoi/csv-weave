@@ -85,6 +85,7 @@ See [Validator reference](docs/validator.md), [Transformer reference](docs/trans
 | Path | Contents |
 | --- | --- |
 | `backend/` | The Rails API application. |
+| `frontend/` | The web interface: React and TypeScript on Vite. Currently a welcome page only. |
 | `e2e/` | End-to-end suite: fixtures, seeding tasks, and the Postman collection. Covers the whole app. |
 | `docs/` | Reference documentation. |
 | `bin/` | Convenience wrappers that run from anywhere in the repository. |
@@ -96,16 +97,60 @@ The wrappers mean no command needs a particular working directory:
 
 | Command | Does |
 | --- | --- |
-| `bin/setup` | Install dependencies and prepare the database. Safe to re-run. |
-| `bin/dev` | Start the development server. |
-| `bin/test` | Run every suite. `bin/test backend` or `bin/test e2e` runs one. |
-| `bin/lint` | Run linters. |
+| `bin/setup` | Install backend and frontend dependencies and prepare the database. Safe to re-run. |
+| `bin/dev` | Start the API and the frontend dev server together with foreman, as listed in `Procfile.dev`. `bin/dev api` or `bin/dev ui` starts one. |
+| `bin/test` | Run every suite. `bin/test backend`, `bin/test frontend`, or `bin/test e2e` runs one. |
+| `bin/lint` | Run every linter. `bin/lint backend` or `bin/lint frontend` runs one side. |
 | `bin/rails` | Run a Rails command in `backend/`. |
+| `bin/ui` | Run npm in `frontend/`, e.g. `bin/ui install <package>`. |
 | `bin/e2e` | `seed`, `clean`, or `newman`. |
+
+Each wrapper prints its usage with `--help`.
 
 ## Run locally
 
-Requires Ruby 4.0.9, PostgreSQL, and Bundler 4.0.11.
+The repository is mounted into a development container that runs both the API
+and the frontend dev server. Start by creating `.env` from the example; it sets
+the host ports (`API_PORT`, `UI_PORT`) and the database connection.
+
+```bash
+cp .env.example .env
+```
+
+### With Docker Compose
+
+[`compose.yaml`](compose.yaml) runs the app container beside its own PostgreSQL.
+
+```bash
+docker compose up --build          # first start builds the image, installs dependencies, prepares the database
+docker compose exec app bin/test   # run commands inside the app container
+docker compose down                # stop; add -v to also delete the database volume
+```
+
+The app container runs `bin/setup` before `bin/dev` on every start, so
+dependency and migration changes are picked up by restarting it.
+
+### With Docker
+
+To use an existing PostgreSQL server instead, build the image and run the
+container yourself. Set `DB_HOST` in `.env` to an address reachable from the
+container, for example the database container's name on a shared Docker network.
+
+```bash
+docker build -f Dockerfile.dev --target e2e -t csv-weave-dev .
+docker run -d --name csv-weave --env-file .env \
+  -p 3000:3000 -p 5173:5173 -v "$PWD":/app \
+  csv-weave-dev bash -c 'bin/setup && exec bin/dev'
+docker exec csv-weave bin/test
+```
+
+Change the left-hand port numbers to match `API_PORT` and `UI_PORT`. The `e2e`
+target adds Newman for the Postman collection; omit `--target e2e` for a slightly
+smaller image without it.
+
+### Without Docker
+
+Requires Ruby 4.0.9, Bundler 4.0.11, Node 22.22 or newer with npm 12, and PostgreSQL. `bin/dev` installs foreman on first use if it is missing.
 
 ```bash
 gem install bundler -v 4.0.11
@@ -119,7 +164,7 @@ bin/setup
 SOLID_QUEUE_IN_PUMA=1 bin/dev
 ```
 
-The configuration API runs at `http://localhost:3000`. Database preparation seeds the catalogs of supported validators and transformers and creates the Solid Queue database. `SOLID_QUEUE_IN_PUMA=1` runs the background worker for validation and conversion runs inside the server.
+The configuration API runs at `http://localhost:3000` and the web interface at `http://localhost:5173`, or on `API_PORT` and `UI_PORT` in a container. Database preparation seeds the catalogs of supported validators and transformers and creates the Solid Queue database. `SOLID_QUEUE_IN_PUMA=1` runs the background worker for validation and conversion runs inside the server.
 
 You can inspect the available operations:
 
@@ -143,12 +188,14 @@ The [API reference](docs/api.md) covers attaching validation rules, creating des
 Run tests and quality checks with:
 
 ```bash
-bin/test          # every suite
-bin/test backend  # RSpec, preparing the test database first
-bin/lint
+bin/test           # every suite
+bin/test backend   # RSpec, preparing the test database first
+bin/test frontend  # Vitest unit tests
+bin/lint           # RuboCop, ESLint, TypeScript type check, Prettier check
+bin/ui run format  # apply Prettier formatting to the frontend
 ```
 
-RSpec covers models, configuration APIs, individual processors, composition of saved processing rules, the background validation and conversion runs, and end-to-end API flows using the e2e fixtures. GitHub Actions also runs linting, autoloading checks, and security scans.
+RSpec covers models, configuration APIs, individual processors, composition of saved processing rules, the background validation and conversion runs, and end-to-end API flows using the e2e fixtures. Vitest and Testing Library cover the frontend. GitHub Actions also runs linting, autoloading checks, security scans, and a frontend build.
 
 End-to-end testing uses clearly fake `E2E-TEST` data. See [e2e/README.md](e2e/README.md) for fixtures, Postman, and Newman.
 

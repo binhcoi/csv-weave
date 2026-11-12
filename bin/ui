@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Run npm in frontend/ from anywhere in the repository.
+#
+#   bin/ui run dev          start the Vite dev server alone
+#   bin/ui install <pkg>    add a dependency
+#   bin/ui run format       rewrite frontend files with Prettier
+#
+# Any npm arguments work; they run with frontend/ as the working directory.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+case "${1:-}" in
+  "" | -h | --help)
+    sed -n '2,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    exit 0
+    ;;
+esac
+
+cd "$ROOT/frontend"
+exec npm "$@"

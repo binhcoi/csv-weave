@@ -1,10 +1,28 @@
 #!/usr/bin/env bash
-# Start the development server(s) from anywhere in the repository.
+# Start the development servers from anywhere in the repository.
 #
-# Serves the API on API_PORT inside the container. The frontend process joins
-# this script once frontend/ exists.
+#   bin/dev        Rails API on port 3000 and Vite on port 5173, through foreman
+#   bin/dev api    Rails API only
+#   bin/dev ui     Vite dev server only
+#
+# Processes are defined in Procfile.dev. In a container they are published on
+# API_PORT and UI_PORT. If one process exits, foreman stops the others.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-exec "$ROOT/bin/rails" server -b 0.0.0.0 "$@"
+case "${1:-}" in
+  -h | --help)
+    sed -n '2,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    exit 0
+    ;;
+esac
+
+if ! command -v foreman >/dev/null; then
+  echo "== installing foreman =="
+  gem install foreman
+fi
+
+# --env /dev/null: the root .env describes the container, not the processes, so
+# foreman must not load it over the environment the processes already have.
+exec foreman start --root "$ROOT" --procfile "$ROOT/Procfile.dev" --env /dev/null "$@"

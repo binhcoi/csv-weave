@@ -1,7 +1,11 @@
 # Two targets:
-#   app (default) - Rails only.
-#   e2e           - app plus Node and Newman for running the Postman collection (bin/rails e2e:newman).
+#   app (default) - Ruby for the Rails API and Node for the frontend dev server.
+#   e2e           - app plus Newman for running the Postman collection (bin/e2e newman).
 #                   Build with: docker build -f Dockerfile.dev --target e2e .
+
+# Source of the Node runtime. Debian Bookworm's own nodejs is Node 18, too old for Vite.
+FROM node:22-bookworm-slim AS node
+
 FROM ruby:4.0.9-slim-bookworm AS base
 
 ARG APP_UID=1000
@@ -12,9 +16,17 @@ RUN apt-get update \
        build-essential git libpq-dev libyaml-dev libvips pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
+# The Node 22 image ships npm 10; frontend/package-lock.json is maintained with npm 12.
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+    && npm_config_cache=/tmp/npm-root npm install -g npm@12 \
+    && rm -rf /tmp/npm-root
+
 RUN groupadd --gid "$APP_GID" app \
     && useradd --uid "$APP_UID" --gid app --create-home app \
-    && mkdir -p /app/backend \
+    && mkdir -p /app/backend /app/frontend \
     && chown -R app:app /app /usr/local/bundle
 
 ENV HOME=/home/app
@@ -28,19 +40,25 @@ USER app
 
 COPY --chown=app:app backend/Gemfile backend/Gemfile.lock /app/backend/
 RUN BUNDLE_FROZEN=true bundle install
+# bin/dev runs Procfile.dev through foreman. Installed outside the bundle, as
+# Rails does, because it is a development tool rather than an app dependency.
+RUN gem install foreman -v '~> 0.90'
 
-EXPOSE 3000
+# Frontend dependencies are not installed here: the source bind mount shadows
+# /app/frontend/node_modules, so bin/setup installs them inside the container.
+
+# 3000: Rails API. 5173: Vite dev server.
+EXPOSE 3000 5173
 
 CMD ["bin/dev"]
 
 FROM base AS e2e
 USER root
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends nodejs npm \
-    && npm install -g newman@6 \
-    && npm cache clean --force \
-    && rm -rf /var/lib/apt/lists/*
+# HOME is /home/app even for root, so use a throwaway npm cache; otherwise a
+# root-owned ~/.npm would break later npm runs as app.
+RUN npm_config_cache=/tmp/npm-root npm install -g newman@6 \
+    && rm -rf /tmp/npm-root
 USER app
 
-# Last stage is the default build target: no Node or Newman.
+# Last stage is the default build target: no Newman.
 FROM base AS app

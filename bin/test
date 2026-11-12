@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Run test suites from anywhere in the repository.
 #
-#   bin/test            run every suite
+#   bin/test            backend specs, frontend unit tests, then the e2e collection
 #   bin/test backend    RSpec, preparing the test database first
-#   bin/test e2e        the Postman collection through Newman
+#   bin/test frontend   Vitest unit tests
+#   bin/test e2e        the Postman collection through Newman (needs the API running)
 #
 # Extra arguments go to the chosen suite, e.g. bin/test backend spec/models
+# or bin/test frontend src/App.test.tsx
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -20,6 +22,14 @@ run_backend() {
   )
 }
 
+run_frontend() {
+  echo "== frontend unit tests =="
+  (
+    cd "$ROOT/frontend"
+    npm test --silent -- "$@"
+  )
+}
+
 run_e2e() {
   echo "== e2e collection =="
   "$ROOT/bin/e2e" newman "$@"
@@ -31,21 +41,25 @@ case "$target" in
     shift
     run_backend "$@"
     ;;
+  frontend)
+    shift
+    run_frontend "$@"
+    ;;
   e2e)
     shift
     run_e2e "$@"
     ;;
   all)
-    shift
     run_backend
+    run_frontend
     run_e2e
     ;;
   -h | --help)
-    sed -n '2,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     exit 0
     ;;
   *)
-    echo "bin/test: unknown suite '$target' (expected backend, e2e, or all)" >&2
+    echo "bin/test: unknown suite '$target' (expected backend, frontend, e2e, or all)" >&2
     exit 1
     ;;
 esac

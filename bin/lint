@@ -1,12 +1,53 @@
 #!/usr/bin/env bash
-# Run linters from anywhere in the repository. Extra arguments go to RuboCop.
+# Run linters from anywhere in the repository.
+#
+#   bin/lint            backend and frontend
+#   bin/lint backend    RuboCop (extra arguments go to RuboCop, e.g. -a)
+#   bin/lint frontend   ESLint, TypeScript type check, and Prettier check
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export BUNDLE_GEMFILE="$ROOT/backend/Gemfile"
 
-echo "== rubocop =="
-(
-  cd "$ROOT/backend"
-  exec bin/rubocop "$@"
-)
+run_backend() {
+  echo "== rubocop =="
+  (
+    cd "$ROOT/backend"
+    bin/rubocop "$@"
+  )
+}
+
+run_frontend() {
+  (
+    cd "$ROOT/frontend"
+    echo "== eslint =="
+    npm run lint --silent
+    echo "== typecheck =="
+    npm run typecheck --silent
+    echo "== prettier =="
+    npm run format:check --silent
+  )
+}
+
+target="${1:-all}"
+case "$target" in
+  backend)
+    shift
+    run_backend "$@"
+    ;;
+  frontend)
+    run_frontend
+    ;;
+  all)
+    run_backend
+    run_frontend
+    ;;
+  -h | --help)
+    sed -n '2,6p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    exit 0
+    ;;
+  *)
+    echo "bin/lint: unknown target '$target' (expected backend, frontend, or nothing for both)" >&2
+    exit 1
+    ;;
+esac

@@ -1,0 +1,7 @@
+# The development image copies only the backend Gemfile and lockfile; the
+# source is bind-mounted at runtime. Ignoring everything else keeps the build
+# context small (backend/log, backend/tmp, and frontend/node_modules are large).
+# Allow-list any file a new COPY instruction needs.
+*
+!backend/Gemfile
+!backend/Gemfile.lock

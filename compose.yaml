@@ -1,0 +1,44 @@
+# Development environment: one app container running the API and the frontend
+# dev server, plus PostgreSQL. Settings come from .env; start from .env.example.
+# The project name defaults to the directory name, so separate worktrees get
+# separate stacks.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      # Includes Newman, so bin/test can run every suite inside the container.
+      target: e2e
+      args:
+        APP_UID: ${LOCAL_UID:-1000}
+        APP_GID: ${LOCAL_GID:-1000}
+    init: true
+    env_file: .env
+    environment:
+      DB_HOST: db
+    command: bash -c "bin/setup && exec bin/dev"
+    volumes:
+      - .:/app
+    ports:
+      - "${API_PORT:-3000}:3000"
+      - "${UI_PORT:-5173}:5173"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db-data:

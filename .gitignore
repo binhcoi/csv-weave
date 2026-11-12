@@ -6,6 +6,7 @@
 
 # Ignore all environment files.
 /.env*
+!/.env.example
 
 # Ignore bundler config.
 /backend/.bundle
@@ -30,6 +31,32 @@
 
 # Ignore key files for decrypting credentials and more.
 /backend/config/*.key
+
+# Logs
+/frontend/logs
+/frontend/*.log
+/frontend/npm-debug.log*
+/frontend/yarn-debug.log*
+/frontend/yarn-error.log*
+/frontend/pnpm-debug.log*
+/frontend/lerna-debug.log*
+
+/frontend/node_modules
+/frontend/dist
+/frontend/dist-ssr
+/frontend/*.local
+
+# Editor directories and files
+/frontend/.vscode/*
+!/frontend/.vscode/extensions.json
+/frontend/.idea
+/frontend/.DS_Store
+/frontend/*.suo
+/frontend/*.ntvs*
+/frontend/*.njsproj
+/frontend/*.sln
+/frontend/*.sw?
+
 
 # Stray caches written at the repository root by a process whose working
 # directory was not backend/.

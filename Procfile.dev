@@ -1,0 +1,8 @@
+# Development processes, started together by bin/dev through foreman.
+#
+# Each line uses exec: foreman signals only the process it spawned, so a shell or npm
+# left in between would die on SIGTERM without passing it on, and Puma would be
+# killed mid-shutdown. PORT is set explicitly because foreman assigns its own
+# PORT values and Puma reads PORT.
+api: exec env PORT=3000 bin/rails server -b 0.0.0.0
+ui: cd frontend && exec node_modules/.bin/vite

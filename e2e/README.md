@@ -1,7 +1,7 @@
 # End-to-end testing
 
 Everything for end-to-end testing lives in this folder, except the RSpec specs in
-[`spec/e2e/`](../spec/e2e). All generated data is clearly fake: configuration names start
+[`backend/spec/e2e/`](../backend/spec/e2e). All generated data is clearly fake: configuration names start
 with `E2E-TEST`, uploaded files with `e2e_test_`, IDs look like `TEST-1001` or `REG-T0001`,
 and names like `Testa Fakeworth`.
 
@@ -47,7 +47,7 @@ Two seeded scenarios, each with its own fixture folder:
 | `e2e_test_registrations_valid.csv` | 4 clean rows showing blank-column handling, exponent decimals, truncation, and division rounding | 4 accepted | 4 accepted |
 | `e2e_test_registrations_mixed.csv` | 2 good rows, one failing row per rule across all three stages, and one row failing five input rules at once | 2 accepted, 15 rejected, 24 errors | 8 accepted, 9 rejected, 13 errors |
 
-`spec/e2e/configuration_seeder_spec.rb` checks that each fixture still produces the files in
+`backend/spec/e2e/configuration_seeder_spec.rb` checks that each fixture still produces the files in
 its `expected/` folder. If you change a fixture or a seeded rule, update the expected files too.
 
 ## Rake tasks

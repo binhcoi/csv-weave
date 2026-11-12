@@ -46,7 +46,9 @@ The next major phase is a browser-based interface for creating configurations an
 
 ### 1. UI foundation (4–6 hours)
 
-- [ ] Choose and integrate a frontend approach with the Rails API. React with TypeScript on Vite, in a separate frontend folder; see [UI.md](UI.md).
+- [x] Choose a frontend approach: React and TypeScript on Vite in `frontend/`, beside the Rails API in `backend/`. See [UI.md](UI.md) for the design.
+- [x] Scaffold the frontend with linting, formatting, unit tests, and CI, and run it beside the API in the development container.
+- [ ] Connect the frontend to the Rails API.
 - [ ] Add navigation and shared components for forms, loading states, and API errors.
 
 **Outcome:** A usable application shell connected to the backend.
