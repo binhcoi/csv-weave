@@ -134,8 +134,8 @@ frontend/
     ├── main.tsx          entry point; mounts the providers and the router
     ├── App.tsx           the route table
     ├── AppLayout.tsx     the navigation shell wrapped around every page
-    ├── themes.ts         candidate Mantine themes: palette, radius, and typography
-    ├── DevStylePanel.tsx  temporary dev-only switcher between the candidate themes
+    ├── themes.ts         candidate style presets: theme tokens, layout, record presentation
+    ├── DevStylePanel.tsx  dev-only style switcher; mixes layout dimensions across presets
     ├── pages/            one component per screen
     ├── components/       shared building blocks used by several screens
     ├── *.test.tsx        unit tests, beside the code they cover
@@ -168,9 +168,14 @@ belonging to one application lives in `frontend/` or `backend/`.
   them by hand and accept drift.
 - **Data fetching and caching:** chosen when the frontend is connected to the
   API.
-- **Visual style:** candidate themes live in `frontend/src/themes.ts` and are
-  compared through a temporary in-app switcher; once one is chosen, the file
-  collapses to a single theme and the switcher is removed.
+- **Visual style:** candidate style presets live in `frontend/src/themes.ts`,
+  each combining theme tokens with layout structure (navigation placement,
+  header treatment, content width, density) and a presentation for record
+  collections (panel rows, tables, cards, stacked lists, or log lines). A
+  development-only in-app switcher compares them and can mix the layout
+  dimensions across presets; it stays in place while features are built. Once
+  a style is finalized, the file collapses to that single theme and fixed
+  layout and the switcher is removed.
 - **Form generation:** a JSON Schema form library, or a renderer of our own over
   the component kit.
 - **Run status updates:** polling, or push over Action Cable. Push would need a

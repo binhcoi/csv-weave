@@ -1,8 +1,20 @@
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { renderApp } from './test/render'
+import { stylePresets } from './themes'
 
 describe('App', () => {
+  // Every preset exercises a different layout and record presentation.
+  it.each(stylePresets.map((preset) => [preset.name]))(
+    'renders the working areas under the %s preset',
+    (presetName) => {
+      renderApp('/file-types', presetName)
+
+      expect(screen.getByRole('heading', { level: 1, name: 'File types' })).toBeInTheDocument()
+      expect(screen.getByText('Customer import')).toBeInTheDocument()
+    },
+  )
+
   it('redirects the root to the help page', () => {
     renderApp('/')
 

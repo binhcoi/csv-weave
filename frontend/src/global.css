@@ -1,0 +1,5 @@
+/* Reserve the scrollbar gutter so fixed elements (the dev style panel) and the
+   layout keep the same width whether or not the page scrolls. */
+html {
+  scrollbar-gutter: stable;
+}

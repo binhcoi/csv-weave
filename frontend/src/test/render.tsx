@@ -2,15 +2,20 @@ import { MantineProvider } from '@mantine/core'
 import { render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import App from '../App'
-import { defaultStyleName, getStyleTheme } from '../themes'
+import { defaultStyleName, getStylePreset, StylePresetContext } from '../themes'
 
-// Render the whole application at a path, inside the providers main.tsx mounts.
-export function renderApp(path: string) {
+// Render the whole application at a path, inside the providers Root.tsx mounts,
+// using the named style preset (the default one when omitted).
+export function renderApp(path: string, presetName: string = defaultStyleName) {
+  const preset = getStylePreset(presetName)
+
   return render(
-    <MantineProvider theme={getStyleTheme(defaultStyleName)}>
-      <MemoryRouter initialEntries={[path]}>
-        <App />
-      </MemoryRouter>
-    </MantineProvider>,
+    <StylePresetContext.Provider value={preset}>
+      <MantineProvider theme={preset.theme}>
+        <MemoryRouter initialEntries={[path]}>
+          <App />
+        </MemoryRouter>
+      </MantineProvider>
+    </StylePresetContext.Provider>,
   )
 }

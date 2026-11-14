@@ -1,20 +1,31 @@
-import { Badge, Button, Group, Stack, Table, Text, Title } from '@mantine/core'
+import { Badge, Button, Group, Stack, Text, Title } from '@mantine/core'
 import { useDocumentTitle } from '@mantine/hooks'
 import { IconUpload } from '@tabler/icons-react'
+import Collection, { type CollectionField } from '../components/Collection'
 import PreviewNote from '../components/PreviewNote'
 
-const operationColors: Record<string, string> = {
-  Validation: 'grape',
-  Conversion: 'blue',
+interface ExampleRun {
+  id: number
+  file: string
+  fileType: string
+  operation: 'Validation' | 'Conversion'
+  status: 'Completed' | 'Running' | 'Failed'
+  accepted: number | null
+  rejected: number | null
 }
 
-const statusColors: Record<string, string> = {
+const operationColors = {
+  Validation: 'grape',
+  Conversion: 'blue',
+} as const
+
+const statusColors = {
   Completed: 'teal',
   Running: 'yellow',
   Failed: 'red',
-}
+} as const
 
-const exampleRuns = [
+const exampleRuns: ExampleRun[] = [
   {
     id: 1,
     file: 'customers-may.csv',
@@ -44,6 +55,31 @@ const exampleRuns = [
   },
 ]
 
+const fields: CollectionField<ExampleRun>[] = [
+  { key: 'file', label: 'File', render: (run) => run.file },
+  { key: 'fileType', label: 'File type', render: (run) => run.fileType },
+  {
+    key: 'operation',
+    label: 'Operation',
+    render: (run) => (
+      <Badge variant="light" color={operationColors[run.operation]}>
+        {run.operation}
+      </Badge>
+    ),
+  },
+  {
+    key: 'status',
+    label: 'Status',
+    render: (run) => (
+      <Badge variant="light" color={statusColors[run.status]}>
+        {run.status}
+      </Badge>
+    ),
+  },
+  { key: 'accepted', label: 'Accepted', render: (run) => run.accepted ?? '—' },
+  { key: 'rejected', label: 'Rejected', render: (run) => run.rejected ?? '—' },
+]
+
 function FilesPage() {
   useDocumentTitle('Files and runs · CSVWeave')
 
@@ -63,38 +99,7 @@ function FilesPage() {
         Example data to settle the look and feel. Uploads and runs arrive once the shell is
         connected to the API.
       </PreviewNote>
-      <Table striped highlightOnHover withTableBorder>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>File</Table.Th>
-            <Table.Th>File type</Table.Th>
-            <Table.Th>Operation</Table.Th>
-            <Table.Th>Status</Table.Th>
-            <Table.Th>Accepted</Table.Th>
-            <Table.Th>Rejected</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {exampleRuns.map((run) => (
-            <Table.Tr key={run.id}>
-              <Table.Td fw={600}>{run.file}</Table.Td>
-              <Table.Td>{run.fileType}</Table.Td>
-              <Table.Td>
-                <Badge variant="light" color={operationColors[run.operation]}>
-                  {run.operation}
-                </Badge>
-              </Table.Td>
-              <Table.Td>
-                <Badge variant="light" color={statusColors[run.status]}>
-                  {run.status}
-                </Badge>
-              </Table.Td>
-              <Table.Td>{run.accepted ?? '—'}</Table.Td>
-              <Table.Td>{run.rejected ?? '—'}</Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+      <Collection items={exampleRuns} fields={fields} itemKey={(run) => run.id} />
     </Stack>
   )
 }

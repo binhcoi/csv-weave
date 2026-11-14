@@ -1,9 +1,17 @@
-import { Badge, Button, Group, Stack, Table, Text, Title } from '@mantine/core'
+import { Badge, Button, Group, Stack, Text, Title } from '@mantine/core'
 import { useDocumentTitle } from '@mantine/hooks'
 import { IconPlus } from '@tabler/icons-react'
+import Collection, { type CollectionField } from '../components/Collection'
 import PreviewNote from '../components/PreviewNote'
 
-const exampleFileTypes = [
+interface ExampleFileType {
+  name: string
+  description: string
+  columns: number
+  rules: number
+}
+
+const exampleFileTypes: ExampleFileType[] = [
   {
     name: 'Customer import',
     description: 'Raw customer rows as exported by the legacy system',
@@ -21,6 +29,25 @@ const exampleFileTypes = [
     description: 'One row per ordered item, with totals in cents',
     columns: 11,
     rules: 21,
+  },
+]
+
+const fields: CollectionField<ExampleFileType>[] = [
+  { key: 'name', label: 'Name', render: (fileType) => fileType.name },
+  { key: 'description', label: 'Description', render: (fileType) => fileType.description },
+  {
+    key: 'columns',
+    label: 'Columns',
+    render: (fileType) => <Badge variant="light">{fileType.columns}</Badge>,
+  },
+  {
+    key: 'rules',
+    label: 'Validation rules',
+    render: (fileType) => (
+      <Badge variant="light" color="gray">
+        {fileType.rules}
+      </Badge>
+    ),
   },
 ]
 
@@ -44,32 +71,7 @@ function FileTypesPage() {
         Example data to settle the look and feel. Creating and editing file types arrives with the
         editor milestone.
       </PreviewNote>
-      <Table striped highlightOnHover withTableBorder>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Name</Table.Th>
-            <Table.Th>Description</Table.Th>
-            <Table.Th>Columns</Table.Th>
-            <Table.Th>Validation rules</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {exampleFileTypes.map((fileType) => (
-            <Table.Tr key={fileType.name}>
-              <Table.Td fw={600}>{fileType.name}</Table.Td>
-              <Table.Td>{fileType.description}</Table.Td>
-              <Table.Td>
-                <Badge variant="light">{fileType.columns}</Badge>
-              </Table.Td>
-              <Table.Td>
-                <Badge variant="light" color="gray">
-                  {fileType.rules}
-                </Badge>
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+      <Collection items={exampleFileTypes} fields={fields} itemKey={(fileType) => fileType.name} />
     </Stack>
   )
 }

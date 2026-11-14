@@ -1,9 +1,19 @@
-import { Badge, Button, Card, Group, SimpleGrid, Stack, Text, Title } from '@mantine/core'
+import { Badge, Button, Group, Stack, Text, Title } from '@mantine/core'
 import { useDocumentTitle } from '@mantine/hooks'
 import { IconArrowRight, IconPlus } from '@tabler/icons-react'
+import Collection, { type CollectionField } from '../components/Collection'
 import PreviewNote from '../components/PreviewNote'
 
-const exampleMaps = [
+interface ExampleMap {
+  name: string
+  source: string
+  target: string
+  transformations: number
+  unmapped: number
+  description: string
+}
+
+const exampleMaps: ExampleMap[] = [
   {
     name: 'Legacy customers to CRM',
     source: 'Customer import',
@@ -19,6 +29,36 @@ const exampleMaps = [
     transformations: 9,
     unmapped: 2,
     description: 'Parses cent amounts into decimals and derives the booking date.',
+  },
+]
+
+const fields: CollectionField<ExampleMap>[] = [
+  { key: 'name', label: 'Name', render: (map) => map.name },
+  {
+    key: 'route',
+    label: 'Converts',
+    render: (map) => (
+      <Group gap="xs" wrap="nowrap">
+        <Badge variant="default">{map.source}</Badge>
+        <IconArrowRight size={14} aria-label="to" />
+        <Badge variant="default">{map.target}</Badge>
+      </Group>
+    ),
+  },
+  { key: 'description', label: 'Description', render: (map) => map.description },
+  {
+    key: 'transformations',
+    label: 'Transformations',
+    render: (map) => (
+      <Group gap="xs">
+        <Badge variant="light">{map.transformations}</Badge>
+        {map.unmapped > 0 && (
+          <Badge variant="light" color="yellow">
+            {map.unmapped} unmapped
+          </Badge>
+        )}
+      </Group>
+    ),
   },
 ]
 
@@ -41,31 +81,7 @@ function MapsPage() {
         Example data to settle the look and feel. Creating and editing maps arrives with the map
         editor milestone.
       </PreviewNote>
-      <SimpleGrid cols={{ base: 1, md: 2 }}>
-        {exampleMaps.map((map) => (
-          <Card key={map.name} withBorder>
-            <Stack gap="xs">
-              <Text fw={600}>{map.name}</Text>
-              <Group gap="xs">
-                <Badge variant="default">{map.source}</Badge>
-                <IconArrowRight size={16} aria-label="to" />
-                <Badge variant="default">{map.target}</Badge>
-              </Group>
-              <Text size="sm" c="dimmed">
-                {map.description}
-              </Text>
-              <Group gap="xs">
-                <Badge variant="light">{map.transformations} transformations</Badge>
-                {map.unmapped > 0 && (
-                  <Badge variant="light" color="yellow">
-                    {map.unmapped} unmapped
-                  </Badge>
-                )}
-              </Group>
-            </Stack>
-          </Card>
-        ))}
-      </SimpleGrid>
+      <Collection items={exampleMaps} fields={fields} itemKey={(map) => map.name} />
     </Stack>
   )
 }
