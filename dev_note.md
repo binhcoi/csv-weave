@@ -1,8 +1,8 @@
-If you are working in a worktree, you need to maintain a separate a docker container to host the app. You can take over existing container if it's for your worktree. Don't worry about worktree switching mid conversation, each prompt might be in a different worktree. Focus on your worktree only, don't worry about main or other work tree code status.
+If you are working in a worktree, you need to maintain a separate a docker container to host the app. You can take over existing container if it's for your worktree. It's possible that each prompt will switch your worktree. Focus on your current worktree only, don't worry about main or other work tree code status. Do not stage or commit without permission.
 
 - Run your container with the `.env` file 
 - Choose ports. Be careful not to conflict with concurrent worktree's container. `API_PORT` serves the Rails API; `UI_PORT` serves the Vite frontend dev server (container port 5173).
-- Mount worktree source at /app. The repository root is mounted, so `/app/backend` is the Rails app, `/app/frontend` the web interface, and `/app/bin` holds the wrappers.
+- The repository root is mounted at `/app`, so `/app/backend` is the Rails app, `/app/frontend` the web interface, and `/app/bin` holds the wrappers.
 - Join dev_default network to access common db.
 - Build the image from your worktree (`docker build -f Dockerfile.dev --target e2e -t csv-weave-<worktree>:<tag> .`) and start the container with `bash -c 'bin/setup && exec bin/dev'`.
 - When `Dockerfile.dev` changes, rebuild your worktree's image and replace your worktree's container (stop, remove, run with the same name, ports, network, and mount). Don't test against another worktree's container or a stale image, and don't leave extra containers behind.

@@ -36,6 +36,19 @@ Accepted costs: a second language, toolchain, and security-advisory stream; a
 stack assembled from parts rather than prescribed by a framework; and no
 enforced contract between the API and the TypeScript code.
 
+Routing is client-side with React Router in declarative mode. The
+application's complexity lives in forms and unsaved editor state, not in
+routing, so the simplest mainstream router is enough; nested routes map
+directly onto the shared navigation shell, and its data mode remains available
+if route-level data loading is wanted later.
+
+Components come from Mantine. It covers the interface's center of gravity —
+dense, accessible configuration forms, plus overlays and notifications — as
+dependencies rather than project work, without adding a styling toolchain such
+as Tailwind, and it keeps component code out of the repository (unlike
+copy-in kits). Virtualization of long lists is not part of the kit; a
+dedicated library is added when the first long list is built.
+
 In development the two applications run side by side, the API on port 3000 and
 the Vite dev server on port 5173. They are different origins, so the frontend
 needs either a Vite proxy or CORS on the backend to reach the API; see
@@ -113,14 +126,20 @@ built:
 
 ```text
 frontend/
-├── index.html          page shell; mounts the app into #root
-├── vite.config.ts      dev server and Vitest settings
+├── index.html            page shell; mounts the app into #root
+├── vite.config.ts        dev server and Vitest settings
+├── postcss.config.cjs    Mantine's PostCSS preset and breakpoint variables
 ├── eslint.config.js
 └── src/
-    ├── main.tsx        entry point
-    ├── App.tsx         the application root (currently a welcome page)
-    ├── *.test.tsx      unit tests, beside the code they cover
-    └── test/setup.ts   Testing Library setup shared by all tests
+    ├── main.tsx          entry point; mounts the providers and the router
+    ├── App.tsx           the route table
+    ├── AppLayout.tsx     the navigation shell wrapped around every page
+    ├── themes.ts         candidate Mantine themes: palette, radius, and typography
+    ├── DevStylePanel.tsx  temporary dev-only switcher between the candidate themes
+    ├── pages/            one component per screen
+    ├── components/       shared building blocks used by several screens
+    ├── *.test.tsx        unit tests, beside the code they cover
+    └── test/             Testing Library setup and the shared render helper
 ```
 
 - Unit tests use Vitest and Testing Library in jsdom and query the page the way
@@ -147,8 +166,11 @@ belonging to one application lives in `frontend/` or `backend/`.
   but commented out.
 - **API types:** generate TypeScript types from an API specification, or write
   them by hand and accept drift.
-- **Routing, data fetching and caching, and component kit:** chosen when the
-  application shell is built.
+- **Data fetching and caching:** chosen when the frontend is connected to the
+  API.
+- **Visual style:** candidate themes live in `frontend/src/themes.ts` and are
+  compared through a temporary in-app switcher; once one is chosen, the file
+  collapses to a single theme and the switcher is removed.
 - **Form generation:** a JSON Schema form library, or a renderer of our own over
   the component kit.
 - **Run status updates:** polling, or push over Action Cable. Push would need a
